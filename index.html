@@ -185,6 +185,43 @@
   }
   .addrow button:hover{border-color:var(--muted);color:var(--text);}
 
+  .saverow{
+    background:#F6F8F9;border-bottom:1px solid var(--line);padding:9px 24px;
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--muted);
+  }
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;
+    border:1px solid var(--line);background:#fff;font-weight:700;font-size:12px;color:var(--muted);
+  }
+  .pill.ok{border-color:#A6D4C4;background:#E5F3EE;color:#1E6A52;}
+  .pill.bad{border-color:#EDB4AE;background:#FCEBE9;color:#9C2F26;}
+  .pill.warnp{border-color:#F0CE8A;background:#FCF3E0;color:#8A5A00;}
+  .sbtn{
+    background:#fff;border:1px solid var(--line);border-radius:6px;padding:5px 11px;
+    font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);
+  }
+  .sbtn:hover{background:#EEF1F3;}
+  .sbtn.go{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .sbtn.go:hover{background:var(--ink-3);}
+
+  .savestate{
+    font-size:12px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:6px;
+    white-space:nowrap;font-variant-numeric:tabular-nums;
+  }
+  .savestate i{width:7px;height:7px;border-radius:50%;background:var(--wait);display:inline-block;flex-shrink:0;}
+  .savestate.saving i{background:var(--doing);}
+  .savestate.saved i{background:var(--done);}
+  .savestate.saved{color:rgba(255,255,255,.75);}
+  .savestate.failed{color:#F5A9A2;font-weight:700;}
+  .savestate.failed i{background:var(--issue);}
+  .tbtn.warn{background:var(--doing);border-color:var(--doing);color:#20180A;}
+  .alert{
+    background:#B93E33;color:#fff;padding:13px 24px;
+    display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.55;
+  }
+  .alert .btn{background:#fff;border-color:#fff;color:#8E2F26;font-weight:700;}
+  .alert .btn:hover{background:#FFEFED;}
+
   .notice{
     background:#FCF3E0;border-bottom:1px solid #F0CE8A;padding:12px 24px;
     display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px;color:#6B4A05;
@@ -362,6 +399,18 @@
     try{ const r = await window.storage.list('', shared); return (r && r.keys) || []; }
     catch(e){ return []; }
   }
+  const PROBE = 'event-board-probe';
+  // 실제로 쓰고 다시 읽어서, 저장이 되는 환경인지 확인한다
+  async function probeStorage(){
+    if(!hasStore) return false;
+    try{
+      const v = 'p' + Date.now();
+      await window.storage.set(PROBE, v, true);
+      const r = await window.storage.get(PROBE, true);
+      return !!(r && r.value === v);
+    }catch(e){ return false; }
+  }
+
   const stripHistory = d => ({event:d.event, admin:d.admin, cats:d.cats, updatedAt:d.updatedAt});
   const isBoard = o => o && o.cats && Array.isArray(o.cats) && o.event;
 
@@ -383,6 +432,13 @@
   let query = '';
   let busy = false;
   let unsaved = false;   // 공유 저장소에 아직 저장된 적 없는 상태
+  let storageOk = null;  // 저장 가능 여부 (null=확인 전)
+  let saving = false, pendingSave = false;
+  let saveState = 'idle', lastSavedAt = 0, sinceBackup = 0;
+  // 아티팩트 저장소와 무관하게, 사용자가 지정한 실제 파일에 직접 쓰는 경로
+  const canFS = typeof window !== 'undefined' && typeof window.showSaveFilePicker === 'function';
+  let fileHandle = null, fileName = '', fileState = 'none', lastFileAt = 0, fileTimer = null;
+  let autoDl = false, dlTimer = null;
 
   const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const todayStr = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
@@ -461,8 +517,9 @@
         </div>
         <input class="search" id="q" type="search" placeholder="항목 검색" value="${esc(query)}" aria-label="검색">
         <span class="spacer"></span>
+        <span class="savestate ${saveState}">${saveStateHtml()}</span>
         <button class="tbtn" data-act="refresh">새로고침</button>
-        <button class="tbtn" data-act="backup">백업 내려받기</button>
+        <button class="tbtn ${sinceBackup>=5||storageOk===false?'warn':''}" data-act="backup">백업 내려받기${sinceBackup>=5?` (${sinceBackup})`:''}</button>
         <button class="tbtn" data-act="csv">CSV</button>
         ${isAdmin
           ? `<button class="tbtn" data-act="restore">백업 불러오기</button>
@@ -472,6 +529,15 @@
              <button class="tbtn on" data-act="lock">편집 중 · 잠그기</button>`
           : `<button class="tbtn key" data-act="unlock">관리자 모드</button>`}
       </div>
+
+      ${storageOk === false ? `<div class="alert">
+        <span><b>이 화면은 내용을 저장하지 못합니다.</b> 새로고침하거나 창을 닫으면 지금까지 입력한 내용이 사라집니다.
+        아래 <b>파일에 저장</b>을 연결하시면 내 컴퓨터 파일에 바로 기록되어 안전합니다.</span>
+        <span class="spacer"></span>
+        <button class="btn" data-act="backup">지금 백업 내려받기</button>
+      </div>` : ''}
+
+      ${renderSaveRow()}
 
       ${unsaved ? `<div class="notice">
         <span><b>저장된 현황판이 없습니다.</b> 지금 보이는 건 기본 체크리스트일 뿐, 아직 아무것도 저장되지 않았습니다.
@@ -583,6 +649,12 @@
     if(a==='refresh') return refresh();
     if(a==='csv') return exportCsv();
     if(a==='backup') return exportBackup();
+    if(a==='fileConnect') return connectFile();
+    if(a==='fileOpen') return openFile();
+    if(a==='fileSaveNow') return writeFile().then(ok=>{ if(ok) toast('파일에 저장했습니다.'); });
+    if(a==='fileDisconnect'){ fileHandle=null; fileName=''; fileState='none'; render(); toast('파일 연결을 해제했습니다.'); return; }
+    if(a==='toggleAuto') return toggleAuto();
+    if(a==='selftest') return selfTest();
     if(a==='restore') return importBackup();
     if(a==='findData') return findDataDialog();
     if(a==='startNew'){ unsaved = false; await commit(); render(); toast('새 현황판을 저장했습니다.'); return; }
@@ -626,17 +698,52 @@
     if(a==='editEvent') return eventDialog();
   }
 
-  async function commit(){
-    if(busy) return;
-    busy = true;
-    // 저장 직전 상태를 스냅샷으로 남겨 되돌릴 수 있게 한다
-    if(!state.history) state.history = [];
-    state.history.push({at:Date.now(), event:JSON.parse(JSON.stringify(state.event)), cats:JSON.parse(JSON.stringify(state.cats))});
-    if(state.history.length > 10) state.history = state.history.slice(-10);
-    const ok = await saveShared(state);
-    busy = false;
-    if(ok){ unsaved = false; mirror(state); }
-    else toast('저장하지 못했습니다. 백업을 내려받아 두세요.');
+  // 저장 요청은 절대 버리지 않는다. 저장 중이면 대기시켰다가 반드시 다시 쓴다.
+  function commit(){
+    pendingSave = true;
+    sinceBackup++;
+    setSaveState('saving');
+    saveLoop();
+    // 연결된 파일에도 기록 (아티팩트 저장소와 독립)
+    if(fileHandle){ clearTimeout(fileTimer); fileTimer = setTimeout(()=>writeFile(), 900); }
+    // 자동 백업이 켜져 있으면 변경이 멈춘 뒤 파일을 내려받는다
+    if(autoDl){ clearTimeout(dlTimer); dlTimer = setTimeout(()=>exportBackup(true), 20000); }
+  }
+
+  async function saveLoop(){
+    if(saving) return;
+    saving = true; busy = true;
+    while(pendingSave){
+      pendingSave = false;
+      if(!state.history) state.history = [];
+      state.history.push({at:Date.now(), event:JSON.parse(JSON.stringify(state.event)), cats:JSON.parse(JSON.stringify(state.cats))});
+      if(state.history.length > 10) state.history = state.history.slice(-10);
+      let ok = await saveShared(state);
+      if(!ok){ await new Promise(r=>setTimeout(r,800)); ok = await saveShared(state); } // 한 번 재시도
+      if(ok){
+        unsaved = false; lastSavedAt = Date.now();
+        setSaveState('saved');
+        await mirror(state);
+      }else{
+        setSaveState('failed');
+      }
+    }
+    saving = false; busy = false;
+  }
+
+  function setSaveState(s){
+    saveState = s;
+    const el = document.querySelector('.savestate');
+    if(el){ el.className = 'savestate ' + s; el.innerHTML = saveStateHtml(); }
+  }
+
+  function saveStateHtml(){
+    const t = lastSavedAt ? new Date(lastSavedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
+    const txt = saveState==='saving' ? '저장 중…'
+      : saveState==='saved' ? `저장됨 ${t}`
+      : saveState==='failed' ? '저장 실패 · 백업하세요'
+      : (storageOk === false ? '저장 불가' : (unsaved ? '저장 안 됨' : (lastSavedAt?`저장됨 ${t}`:'대기')));
+    return `<i></i>${txt}`;
   }
 
   async function refresh(){
@@ -836,6 +943,122 @@
     });
   }
 
+  function renderSaveRow(){
+    const t = lastFileAt ? new Date(lastFileAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
+    let filePill, fileBtns;
+    if(fileState === 'ok'){
+      filePill = `<span class="pill ok" id="filepill">● 파일에 저장 중 · ${esc(fileName)}${t?` · ${t}`:''}</span>`;
+      fileBtns = `<button class="sbtn" data-act="fileSaveNow">지금 파일에 쓰기</button>
+                  <button class="sbtn" data-act="fileDisconnect">연결 해제</button>`;
+    }else if(!canFS){
+      filePill = `<span class="pill warnp" id="filepill">파일 직접 저장 미지원 브라우저</span>`;
+      fileBtns = `<button class="sbtn" data-act="toggleAuto">${autoDl?'자동 백업 끄기':'자동 백업 켜기'}</button>`;
+    }else{
+      filePill = `<span class="pill ${storageOk===false?'bad':''}" id="filepill">파일에 저장: 연결 안 됨</span>`;
+      fileBtns = `<button class="sbtn go" data-act="fileConnect">파일에 저장 연결</button>
+                  <button class="sbtn" data-act="fileOpen">저장한 파일 열기</button>`;
+    }
+    const storePill = storageOk === false
+      ? `<span class="pill bad">이 화면 저장소: 사용 불가</span>`
+      : storageOk === true
+        ? `<span class="pill ok">이 화면 저장소: 정상</span>`
+        : `<span class="pill">이 화면 저장소: 확인 중</span>`;
+
+    return `<div class="saverow">
+      ${filePill}${fileBtns}
+      <span class="spacer"></span>
+      ${autoDl?`<span class="pill warnp">자동 백업 켜짐</span>`:''}
+      ${storePill}
+      <button class="sbtn" data-act="selftest">저장 검사</button>
+    </div>`;
+  }
+
+  async function connectFile(){
+    if(!canFS){ toast('이 브라우저에서는 파일 직접 저장을 쓸 수 없습니다. 자동 백업을 켜 주세요.'); return; }
+    try{
+      fileHandle = await window.showSaveFilePicker({
+        suggestedName: `${state.event.name||'행사현황판'}.json`,
+        types:[{description:'행사 현황판', accept:{'application/json':['.json']}}]
+      });
+      fileName = fileHandle.name;
+      fileState = 'ok';
+      await writeFile();
+      render();
+      toast('연결했습니다. 이제 바꿀 때마다 이 파일에 바로 기록됩니다.');
+    }catch(e){
+      if(e && e.name === 'AbortError') return;
+      fileState = 'blocked'; fileHandle = null; render();
+      toast('이 환경에서는 파일 직접 저장이 막혀 있습니다. 자동 백업을 켜 주세요.');
+    }
+  }
+
+  async function openFile(){
+    if(!canFS){ toast('이 브라우저에서는 지원하지 않습니다. ‘백업 불러오기’를 이용하세요.'); return; }
+    try{
+      const [h] = await window.showOpenFilePicker({types:[{description:'행사 현황판', accept:{'application/json':['.json']}}]});
+      const board = parseBoard(await (await h.getFile()).text());
+      if(!board){ toast('현황판 파일이 아닙니다.'); return; }
+      fileHandle = h; fileName = h.name; fileState = 'ok';
+      applyBoard(board);
+    }catch(e){ if(e && e.name !== 'AbortError') toast('파일을 열지 못했습니다.'); }
+  }
+
+  async function writeFile(){
+    if(!fileHandle) return false;
+    try{
+      if(fileHandle.queryPermission){
+        let p = await fileHandle.queryPermission({mode:'readwrite'});
+        if(p !== 'granted' && fileHandle.requestPermission) p = await fileHandle.requestPermission({mode:'readwrite'});
+        if(p !== 'granted'){ fileState = 'blocked'; render(); return false; }
+      }
+      const w = await fileHandle.createWritable();
+      await w.write(JSON.stringify({kind:'event-board', savedAt:new Date().toISOString(), board:stripHistory(state)}, null, 2));
+      await w.close();
+      lastFileAt = Date.now(); fileState = 'ok'; sinceBackup = 0;
+      const pill = document.getElementById('filepill');
+      if(pill){
+        pill.className = 'pill ok';
+        pill.textContent = `● 파일에 저장 중 · ${fileName} · ${new Date(lastFileAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+      }
+      return true;
+    }catch(e){
+      fileState = 'error'; render();
+      toast('파일에 쓰지 못했습니다. 백업 내려받기로 보관해 주세요.');
+      return false;
+    }
+  }
+
+  function selfTest(){
+    modal(`<h3>저장 검사</h3><div class="body"><p style="font-size:13px;color:var(--muted);margin:0">검사 중…</p></div>
+      <div class="acts"><button class="btn ghost" data-x="c">닫기</button></div>`, async ov=>{
+      ov.querySelector('[data-x="c"]').onclick = close;
+      const ok = await probeStorage();
+      storageOk = ok;
+      const fileOk = fileState === 'ok' ? await writeFile() : null;
+      const lines = [];
+      lines.push(ok
+        ? '<div class="snap"><span class="pill ok">정상</span><span>이 화면의 저장소에 쓰고 다시 읽는 데 성공했습니다.</span></div>'
+        : '<div class="snap"><span class="pill bad">불가</span><span>이 화면의 저장소는 동작하지 않습니다. 새로고침하면 내용이 사라집니다.</span></div>');
+      lines.push(fileOk === true
+        ? `<div class="snap"><span class="pill ok">정상</span><span>‘${esc(fileName)}’ 파일에 기록했습니다. 이 경로가 가장 안전합니다.</span></div>`
+        : fileOk === false
+          ? '<div class="snap"><span class="pill bad">실패</span><span>연결된 파일에 쓰지 못했습니다. 다시 연결해 주세요.</span></div>'
+          : '<div class="snap"><span class="pill warnp">미연결</span><span>파일에 저장이 연결되지 않았습니다. 연결하면 무슨 일이 있어도 안전합니다.</span></div>');
+      const verdict = (ok || fileOk === true)
+        ? '<p style="font-size:13.5px;font-weight:700;margin:0 0 10px;color:#1E6A52">작업하셔도 됩니다. 내용이 보관됩니다.</p>'
+        : '<p style="font-size:13.5px;font-weight:700;margin:0 0 10px;color:#9C2F26">지금 작업하면 잃습니다. 파일에 저장을 먼저 연결하거나 자동 백업을 켜 주세요.</p>';
+      ov.querySelector('.body').innerHTML = verdict + lines.join('');
+      render();
+    });
+  }
+
+  function toggleAuto(){
+    autoDl = !autoDl;
+    render();
+    toast(autoDl ? '변경이 멈추면 20초 뒤 백업 파일이 자동으로 내려받아집니다.' : '자동 백업을 껐습니다.');
+    if(autoDl) exportBackup(true);
+  }
+
   /* ── 백업 · 복원 ──────────────────────────── */
   function download(name, text, type){
     const url = URL.createObjectURL(new Blob([text],{type:type}));
@@ -850,40 +1073,77 @@
     return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
   }
 
-  function exportBackup(){
+  function exportBackup(silent){
     const payload = JSON.stringify({kind:'event-board', savedAt:new Date().toISOString(), board:stripHistory(state)}, null, 2);
     download(`${state.event.name||'행사현황판'}-백업-${stamp()}.json`, payload, 'application/json');
+    sinceBackup = 0;
+    if(silent){ const b = document.querySelector('[data-act="backup"]'); if(b){ b.className='tbtn'; b.textContent='백업 내려받기'; } return; }
+    render();
     toast('백업 파일을 내려받았습니다. 이 파일만 있으면 언제든 되살릴 수 있습니다.');
   }
 
+  function applyBoard(board){
+    const n = board.cats.reduce((s,c)=>s+c.tasks.length,0);
+    confirmDialog('백업을 불러올까요?', `‘${board.event.name||'제목 없음'}’ · ${board.cats.length}단계 ${n}개 항목으로 지금 화면을 덮어씁니다. 되돌리기에서 현재 상태로 돌아올 수 있습니다.`, '불러오기', async ()=>{
+      const keepHash = state.admin && state.admin.hash;
+      state.event = board.event;
+      state.cats  = board.cats;
+      if(!keepHash && board.admin) state.admin = board.admin;
+      unsaved = false;
+      render(); commit(); await mirror(state, true);
+      toast('백업을 되살렸습니다.');
+    });
+  }
+
+  function parseBoard(text){
+    try{
+      const p = JSON.parse(text);
+      return isBoard(p) ? p : (isBoard(p.board) ? p.board : null);
+    }catch(e){ return null; }
+  }
+
   function importBackup(){
-    const input = document.createElement('input');
-    input.type = 'file'; input.accept = 'application/json,.json';
-    input.onchange = () => {
-      const f = input.files && input.files[0];
-      if(!f) return;
-      const r = new FileReader();
-      r.onload = () => {
-        let board = null;
-        try{
-          const p = JSON.parse(r.result);
-          board = isBoard(p) ? p : (isBoard(p.board) ? p.board : null);
-        }catch(e){}
-        if(!board){ toast('현황판 백업 파일이 아닙니다. 내려받은 .json 파일을 골라 주세요.'); return; }
-        const n = board.cats.reduce((s,c)=>s+c.tasks.length,0);
-        confirmDialog('백업을 불러올까요?', `‘${board.event.name||'제목 없음'}’ · ${board.cats.length}단계 ${n}개 항목으로 지금 화면을 덮어씁니다. 되돌리기에서 현재 상태로 돌아올 수 있습니다.`, '불러오기', async ()=>{
-          const keepHash = state.admin && state.admin.hash;
-          state.event = board.event;
-          state.cats  = board.cats;
-          if(!keepHash && board.admin) state.admin = board.admin;
-          unsaved = false;
-          render(); await commit(); await mirror(state, true);
-          toast('백업을 되살렸습니다.');
-        });
+    modal(`
+      <h3>백업 불러오기</h3>
+      <div class="body">
+        <div class="fld">
+          <label>백업 파일 선택</label>
+          <button class="btn" id="pick" style="width:100%">.json 파일 고르기</button>
+          <div class="hint">‘백업 내려받기’로 저장해 둔 파일을 고르세요.</div>
+        </div>
+        <div class="fld">
+          <label>또는 백업 내용 붙여넣기</label>
+          <textarea id="paste" placeholder="백업 파일을 열어서 전체를 복사한 뒤 여기에 붙여넣으세요"></textarea>
+        </div>
+        <div id="err"></div>
+      </div>
+      <div class="acts">
+        <button class="btn ghost" data-x="c">취소</button>
+        <button class="btn pri" data-x="o">붙여넣은 내용으로 복원</button>
+      </div>`, ov=>{
+      ov.querySelector('[data-x="c"]').onclick = close;
+      ov.querySelector('#pick').onclick = ()=>{
+        const input = document.createElement('input');
+        input.type = 'file'; input.accept = 'application/json,.json';
+        input.onchange = ()=>{
+          const f = input.files && input.files[0];
+          if(!f) return;
+          const r = new FileReader();
+          r.onload = ()=>{
+            const board = parseBoard(r.result);
+            if(!board){ ov.querySelector('#err').innerHTML = '<div class="err">현황판 백업 파일이 아닙니다.</div>'; return; }
+            close(); applyBoard(board);
+          };
+          r.readAsText(f);
+        };
+        input.click();
       };
-      r.readAsText(f);
-    };
-    input.click();
+      ov.querySelector('[data-x="o"]').onclick = ()=>{
+        const board = parseBoard(ov.querySelector('#paste').value.trim());
+        if(!board){ ov.querySelector('#err').innerHTML = '<div class="err">내용을 읽지 못했습니다. 백업 파일 전체를 복사해 붙여넣어 주세요.</div>'; return; }
+        close(); applyBoard(board);
+      };
+    });
   }
 
   function undoDialog(){
@@ -926,7 +1186,7 @@
     if(isBoard(m)) found.push({label:'이 브라우저에 남아 있던 사본', data:m, at:m.updatedAt});
     for(const shared of [true,false]){
       for(const k of await listKeys(shared)){
-        if(k === KEY || k === MIRROR || k === SESSION_KEY) continue;
+        if(k === KEY || k === MIRROR || k === SESSION_KEY || k === PROBE) continue;
         try{
           const r = await window.storage.get(k, shared);
           const p = JSON.parse(r.value);
@@ -975,6 +1235,7 @@
 
   /* ── 시작 ─────────────────────────────────── */
   (async function start(){
+    storageOk = await probeStorage();
     let data = await loadShared();
     if(!data){
       // 저장된 게 없어도 절대 자동으로 덮어쓰지 않는다.
@@ -992,6 +1253,8 @@
     state = data;
     if(!state.history) state.history = [];
     if(!unsaved) mirror(state, true);
+    // 저장이 안 되는 환경이면 자동 백업을 기본으로 켜 둔다
+    if(storageOk === false && !canFS) autoDl = true;
     const role = await loadRole();
     if(role === 'admin' && state.admin.hash) isAdmin = true;
     render();
@@ -1010,6 +1273,17 @@
     };
     window.addEventListener('focus', sync);
     setInterval(sync, 60000);
+
+    // 저장이 끝나지 않았는데 창을 닫으려 하면 경고
+    window.addEventListener('beforeunload', e=>{
+      if(pendingSave || saving || saveState==='failed' || storageOk===false){
+        e.preventDefault(); e.returnValue = '';
+      }
+    });
+    // 저장에 실패한 상태면 계속 다시 시도
+    setInterval(()=>{ if(saveState==='failed' && !saving){ pendingSave = true; saveLoop(); } }, 15000);
+    // 저장 불가 환경이면 백업을 잊지 않도록 주기적으로 알림
+    if(storageOk === false) setInterval(()=>{ if(sinceBackup>0) toast('아직 백업하지 않은 변경이 있습니다. 백업 내려받기를 눌러 주세요.'); }, 120000);
   })();
 })();
 </script>
