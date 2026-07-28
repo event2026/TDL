@@ -1,1289 +1,875 @@
-<div id="app">
-  <div class="boot">현황판을 불러오는 중…</div>
-</div>
-
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>행사 진행 현황판</title>
 <style>
   :root{
-    --ink:#131A26;
-    --ink-2:#1E2838;
-    --ink-3:#2B3749;
-    --paper:#EAEDF0;
-    --card:#FFFFFF;
-    --line:#D7DCE2;
-    --line-soft:#E6EAEE;
-    --text:#18202D;
-    --muted:#6C7683;
-    --wait:#98A2AF;
-    --doing:#E39A11;
-    --done:#2E8367;
-    --issue:#C4453A;
-    --focus:#3B7DD8;
+    --ink:#131A26; --ink-2:#1E2838; --ink-3:#2B3749;
+    --paper:#EAEDF0; --card:#FFF; --line:#D7DCE2; --line-soft:#E6EAEE;
+    --text:#18202D; --muted:#6C7683;
+    --wait:#98A2AF; --doing:#E39A11; --done:#2E8367; --issue:#C4453A; --focus:#3B7DD8;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
     --sans:"Pretendard","Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
   }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{font-family:var(--sans);color:var(--text);background:var(--paper);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .boot{padding:80px 24px;text-align:center;color:var(--muted);font-size:14px;}
+  .eyebrow{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);}
+  .spacer{flex:1 1 auto;}
 
-  #app *{box-sizing:border-box;}
-  #app{
-    font-family:var(--sans);
-    color:var(--text);
-    background:var(--paper);
-    min-height:100%;
-    -webkit-font-smoothing:antialiased;
-    line-height:1.5;
-  }
-  #app .boot{padding:64px 24px;text-align:center;color:var(--muted);font-size:14px;}
-
-  .eyebrow{
-    font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
-    color:var(--muted);
-  }
-
-  /* ── 헤더(상황실 패널) ───────────────────────── */
-  .panel{
-    background:var(--ink);
-    color:#fff;
-    padding:22px 24px 18px;
-    position:relative;
-  }
-  .panel::after{
-    content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
-    background:linear-gradient(90deg,var(--doing),var(--done) 45%,transparent);
-    opacity:.55;
-  }
+  /* 헤더 */
+  .panel{background:var(--ink);color:#fff;padding:22px 24px 18px;position:relative;}
+  .panel::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,var(--doing),var(--done) 45%,transparent);opacity:.55;}
   .panel-top{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;justify-content:space-between;}
   .panel .eyebrow{color:rgba(255,255,255,.45);}
-  .ev-name{
-    font-size:27px;font-weight:800;letter-spacing:-.02em;margin:4px 0 0;
-    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-  }
-  .ev-meta{
-    margin-top:7px;font-size:13px;color:rgba(255,255,255,.62);
-    display:flex;gap:14px;flex-wrap:wrap;align-items:center;
-  }
+  .ev-name{font-size:27px;font-weight:800;letter-spacing:-.02em;margin:4px 0 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .ev-meta{margin-top:7px;font-size:13px;color:rgba(255,255,255,.62);display:flex;gap:14px;flex-wrap:wrap;}
   .ev-meta b{color:rgba(255,255,255,.85);font-weight:600;}
-  .dday{
-    font-family:var(--mono);font-variant-numeric:tabular-nums;
-    background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);
-    padding:3px 9px;border-radius:5px;font-size:13px;font-weight:700;letter-spacing:.02em;
-  }
+  .dday{font-family:var(--mono);font-variant-numeric:tabular-nums;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);padding:3px 9px;border-radius:5px;font-size:13px;font-weight:700;}
   .dday.soon{background:rgba(227,154,17,.18);border-color:rgba(227,154,17,.5);color:#F5C25E;}
   .dday.past{background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);}
-
   .rate{text-align:right;flex-shrink:0;}
-  .rate .num{
-    font-size:44px;font-weight:800;letter-spacing:-.04em;line-height:1;
-    font-variant-numeric:tabular-nums;
-  }
+  .rate .num{font-size:44px;font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;}
   .rate .num span{font-size:19px;font-weight:700;margin-left:2px;opacity:.6;}
-
-  /* 시그니처: 큐 램프 스트립 */
-  .lamps{
-    display:flex;gap:2px;margin-top:18px;height:15px;align-items:stretch;
-    border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);padding:2px;
-  }
-  .lamp{flex:1 1 0;min-width:2px;border-radius:2px;background:var(--wait);opacity:.35;transition:opacity .2s;}
+  .lamps{display:flex;gap:2px;margin-top:18px;height:15px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);padding:2px;}
+  .lamp{flex:1 1 0;min-width:2px;border-radius:2px;background:var(--wait);opacity:.35;}
   .lamp.doing{background:var(--doing);opacity:1;}
   .lamp.done{background:var(--done);opacity:1;}
   .lamp.issue{background:var(--issue);opacity:1;animation:blink 1.6s ease-in-out infinite;}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.42}}
   @media (prefers-reduced-motion:reduce){.lamp.issue{animation:none}}
-
-  .legend{
-    display:flex;gap:18px;flex-wrap:wrap;margin-top:11px;
-    font-size:12px;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums;
-  }
-  .legend i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:6px;vertical-align:1px;}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:11px;font-size:12px;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums;}
+  .legend i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:6px;}
   .legend b{color:#fff;font-weight:700;}
 
-  /* ── 툴바 ─────────────────────────────────── */
-  .toolbar{
-    background:var(--ink-2);padding:11px 24px;
-    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
-    position:sticky;top:0;z-index:20;
-  }
-  .filters{display:flex;gap:4px;flex-wrap:wrap;}
-  .chip-f{
-    background:transparent;border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.7);
-    padding:5px 11px;border-radius:99px;font-size:12.5px;font-weight:600;cursor:pointer;
-    font-family:inherit;transition:.15s;white-space:nowrap;
-  }
+  /* 저장 상태 줄 */
+  .saverow{background:#F6F8F9;border-bottom:1px solid var(--line);padding:9px 24px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--muted);}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;border:1px solid var(--line);background:#fff;font-weight:700;font-size:12px;color:var(--muted);}
+  .pill.ok{border-color:#A6D4C4;background:#E5F3EE;color:#1E6A52;}
+  .pill.bad{border-color:#EDB4AE;background:#FCEBE9;color:#9C2F26;}
+  .pill.warnp{border-color:#F0CE8A;background:#FCF3E0;color:#8A5A00;}
+  .sbtn{background:#fff;border:1px solid var(--line);border-radius:6px;padding:5px 11px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);}
+  .sbtn:hover{background:#EEF1F3;}
+  .sbtn.go{background:var(--done);border-color:var(--done);color:#fff;}
+  .sbtn.go:hover{background:#25705A;}
+  .sbtn:disabled{opacity:.45;cursor:default;}
+
+  /* 툴바 */
+  .toolbar{background:var(--ink-2);padding:11px 24px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:20;}
+  .chip-f{background:transparent;border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.7);padding:5px 11px;border-radius:99px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
   .chip-f:hover{border-color:rgba(255,255,255,.4);color:#fff;}
   .chip-f[aria-pressed="true"]{background:#fff;color:var(--ink);border-color:#fff;}
-  .search{
-    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
-    color:#fff;padding:6px 11px;border-radius:6px;font-size:13px;font-family:inherit;
-    min-width:150px;flex:1 1 150px;max-width:260px;
-  }
+  .filters{display:flex;gap:4px;flex-wrap:wrap;}
+  .search{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;padding:6px 11px;border-radius:6px;font-size:13px;font-family:inherit;flex:1 1 150px;max-width:260px;}
   .search::placeholder{color:rgba(255,255,255,.38);}
-  .spacer{flex:1 1 auto;}
-  .tbtn{
-    background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);color:#fff;
-    padding:6px 12px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;
-    font-family:inherit;white-space:nowrap;transition:.15s;
-  }
+  .tbtn{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);color:#fff;padding:6px 12px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
   .tbtn:hover{background:rgba(255,255,255,.18);}
   .tbtn.key{background:var(--doing);border-color:var(--doing);color:#20180A;}
-  .tbtn.key:hover{background:#F0AA26;}
   .tbtn.on{background:var(--done);border-color:var(--done);color:#fff;}
 
-  /* ── 보드 ─────────────────────────────────── */
-  .board{padding:22px 24px 72px;max-width:1180px;margin:0 auto;}
+  .alert{background:#B93E33;color:#fff;padding:13px 24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.55;}
+  .alert .btn{background:#fff;border-color:#fff;color:#8E2F26;font-weight:700;}
+  .notice{background:#FCF3E0;border-bottom:1px solid #F0CE8A;padding:12px 24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px;color:#6B4A05;}
+  .notice b{font-weight:700;}
+  .notice .btn{padding:6px 12px;font-size:12.5px;}
 
+  /* 보드 */
+  .board{padding:22px 24px 72px;max-width:1180px;margin:0 auto;}
   .cat{margin-bottom:26px;}
   .cat-head{display:flex;align-items:center;gap:12px;margin-bottom:9px;}
-  .cat-no{
-    font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--ink);
-    width:26px;height:26px;border-radius:5px;display:grid;place-items:center;flex-shrink:0;
-  }
+  .cat-no{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--ink);width:26px;height:26px;border-radius:5px;display:grid;place-items:center;flex-shrink:0;}
   .cat-name{font-size:15.5px;font-weight:700;letter-spacing:-.01em;}
   .cat-rule{flex:1;height:1px;background:var(--line);}
-  .cat-count{
-    font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;
-    flex-shrink:0;
-  }
+  .cat-count{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
   .cat-count.full{color:var(--done);font-weight:700;}
-
   .rows{background:var(--card);border:1px solid var(--line);border-radius:9px;overflow:hidden;}
-  .row{
-    display:grid;grid-template-columns:88px 1fr 118px auto;
-    gap:12px;align-items:center;padding:11px 14px;
-    border-bottom:1px solid var(--line-soft);
-  }
+  .row{display:grid;grid-template-columns:88px 1fr 118px auto;gap:12px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line-soft);}
   .row:last-child{border-bottom:none;}
   .row:hover{background:#FAFBFC;}
   .row.done .r-title{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px;}
-
-  .st{
-    border:1px solid;border-radius:5px;padding:4px 0;font-size:11.5px;font-weight:700;
-    text-align:center;font-family:inherit;width:100%;letter-spacing:.02em;
-  }
+  .st{border:1px solid;border-radius:5px;padding:4px 0;font-size:11.5px;font-weight:700;text-align:center;font-family:inherit;width:100%;}
   .st.wait{color:#59636F;border-color:var(--line);background:#F4F6F8;}
   .st.doing{color:#8A5A00;border-color:#F0CE8A;background:#FCF3E0;}
   .st.done{color:#1E6A52;border-color:#A6D4C4;background:#E5F3EE;}
   .st.issue{color:#9C2F26;border-color:#EDB4AE;background:#FCEBE9;}
   button.st{cursor:pointer;}
   button.st:hover{filter:brightness(.96);}
-
   .r-title{font-size:14px;font-weight:500;word-break:keep-all;}
   .r-memo{font-size:12.5px;color:var(--muted);margin-top:3px;white-space:pre-wrap;word-break:break-word;}
   .r-due{font-size:12.5px;font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;}
   .r-due.late{color:var(--issue);font-weight:700;}
   .r-act{display:flex;gap:5px;}
-  .ibtn{
-    background:#fff;border:1px solid var(--line);border-radius:5px;width:27px;height:27px;
-    cursor:pointer;font-size:12px;color:var(--muted);font-family:inherit;line-height:1;
-  }
+  .ibtn{background:#fff;border:1px solid var(--line);border-radius:5px;width:27px;height:27px;cursor:pointer;font-size:12px;color:var(--muted);font-family:inherit;line-height:1;}
   .ibtn:hover{border-color:var(--muted);color:var(--text);}
   .ibtn.del:hover{border-color:var(--issue);color:var(--issue);}
   .ibtn:disabled{opacity:.28;cursor:default;}
-  .ibtn:disabled:hover{border-color:var(--line);color:var(--muted);}
-
   .addrow{padding:9px 14px;background:#FAFBFC;border-top:1px solid var(--line-soft);}
-  .addrow button{
-    background:none;border:1px dashed var(--line);border-radius:6px;padding:6px 12px;
-    font-size:12.5px;color:var(--muted);cursor:pointer;font-family:inherit;font-weight:600;
-  }
+  .addrow button{background:none;border:1px dashed var(--line);border-radius:6px;padding:6px 12px;font-size:12.5px;color:var(--muted);cursor:pointer;font-family:inherit;font-weight:600;}
   .addrow button:hover{border-color:var(--muted);color:var(--text);}
-
-  .saverow{
-    background:#F6F8F9;border-bottom:1px solid var(--line);padding:9px 24px;
-    display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--muted);
-  }
-  .pill{
-    display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;
-    border:1px solid var(--line);background:#fff;font-weight:700;font-size:12px;color:var(--muted);
-  }
-  .pill.ok{border-color:#A6D4C4;background:#E5F3EE;color:#1E6A52;}
-  .pill.bad{border-color:#EDB4AE;background:#FCEBE9;color:#9C2F26;}
-  .pill.warnp{border-color:#F0CE8A;background:#FCF3E0;color:#8A5A00;}
-  .sbtn{
-    background:#fff;border:1px solid var(--line);border-radius:6px;padding:5px 11px;
-    font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);
-  }
-  .sbtn:hover{background:#EEF1F3;}
-  .sbtn.go{background:var(--ink);border-color:var(--ink);color:#fff;}
-  .sbtn.go:hover{background:var(--ink-3);}
-
-  .savestate{
-    font-size:12px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:6px;
-    white-space:nowrap;font-variant-numeric:tabular-nums;
-  }
-  .savestate i{width:7px;height:7px;border-radius:50%;background:var(--wait);display:inline-block;flex-shrink:0;}
-  .savestate.saving i{background:var(--doing);}
-  .savestate.saved i{background:var(--done);}
-  .savestate.saved{color:rgba(255,255,255,.75);}
-  .savestate.failed{color:#F5A9A2;font-weight:700;}
-  .savestate.failed i{background:var(--issue);}
-  .tbtn.warn{background:var(--doing);border-color:var(--doing);color:#20180A;}
-  .alert{
-    background:#B93E33;color:#fff;padding:13px 24px;
-    display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.55;
-  }
-  .alert .btn{background:#fff;border-color:#fff;color:#8E2F26;font-weight:700;}
-  .alert .btn:hover{background:#FFEFED;}
-
-  .notice{
-    background:#FCF3E0;border-bottom:1px solid #F0CE8A;padding:12px 24px;
-    display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px;color:#6B4A05;
-  }
-  .notice b{font-weight:700;}
-  .notice .btn{padding:6px 12px;font-size:12.5px;}
-  .snap{
-    display:flex;align-items:center;gap:10px;padding:10px 0;
-    border-bottom:1px solid var(--line-soft);font-size:13px;
-  }
-  .snap:last-child{border-bottom:none;}
-  .snap time{font-family:var(--mono);font-size:12px;color:var(--muted);flex:1;font-variant-numeric:tabular-nums;}
-
   .empty{padding:44px 20px;text-align:center;color:var(--muted);font-size:14px;}
-  .foot{
-    max-width:1180px;margin:0 auto;padding:0 24px 40px;
-    font-size:11.5px;color:var(--muted);line-height:1.7;
-  }
+  .foot{max-width:1180px;margin:0 auto;padding:0 24px 40px;font-size:11.5px;color:var(--muted);line-height:1.7;}
 
-  /* ── 모달 ─────────────────────────────────── */
-  .overlay{
-    position:fixed;inset:0;background:rgba(19,26,38,.55);z-index:100;
-    display:grid;place-items:center;padding:20px;
-  }
-  .modal{
-    background:#fff;border-radius:11px;width:100%;max-width:460px;
-    box-shadow:0 18px 50px rgba(19,26,38,.3);max-height:90vh;overflow:auto;
-  }
-  .modal h3{margin:0;padding:18px 20px 0;font-size:16px;font-weight:700;letter-spacing:-.01em;}
+  /* 모달 */
+  .overlay{position:fixed;inset:0;background:rgba(19,26,38,.55);z-index:100;display:grid;place-items:center;padding:20px;}
+  .modal{background:#fff;border-radius:11px;width:100%;max-width:520px;box-shadow:0 18px 50px rgba(19,26,38,.3);max-height:90vh;overflow:auto;}
+  .modal h3{margin:0;padding:18px 20px 0;font-size:16px;font-weight:700;}
   .modal .body{padding:16px 20px 4px;}
   .fld{margin-bottom:13px;}
   .fld label{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
-  .fld input,.fld textarea,.fld select{
-    width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 11px;
-    font-size:14px;font-family:inherit;color:var(--text);background:#fff;
-  }
+  .fld input,.fld textarea,.fld select{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 11px;font-size:14px;font-family:inherit;color:var(--text);background:#fff;}
   .fld textarea{min-height:70px;resize:vertical;}
-  .fld input:focus,.fld textarea:focus,.fld select:focus{outline:2px solid var(--focus);outline-offset:-1px;border-color:var(--focus);}
-  .fld .hint{font-size:11.5px;color:var(--muted);margin-top:5px;}
+  .fld input:focus,.fld textarea:focus,.fld select:focus{outline:2px solid var(--focus);outline-offset:-1px;}
+  .fld .hint{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.6;}
   .segs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
   .segs .st{cursor:pointer;padding:8px 0;}
   .segs .st[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:1px;}
   .acts{display:flex;gap:8px;justify-content:flex-end;padding:8px 20px 18px;flex-wrap:wrap;}
-  .btn{
-    padding:9px 15px;border-radius:6px;font-size:13.5px;font-weight:600;cursor:pointer;
-    font-family:inherit;border:1px solid var(--line);background:#fff;color:var(--text);
-  }
+  .btn{padding:9px 15px;border-radius:6px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid var(--line);background:#fff;color:var(--text);}
   .btn:hover{background:#F4F6F8;}
   .btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;}
-  .btn.pri:hover{background:var(--ink-3);}
   .btn.danger{border-color:#EDB4AE;color:var(--issue);}
-  .btn.danger:hover{background:#FCEBE9;}
   .btn.ghost{border:none;color:var(--muted);}
   .err{color:var(--issue);font-size:12.5px;margin-top:8px;font-weight:600;}
-
-  .toast{
-    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-    background:var(--ink);color:#fff;padding:10px 18px;border-radius:7px;font-size:13px;
-    z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.22);font-weight:500;
-  }
-
+  .snap{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line-soft);font-size:13px;}
+  .snap:last-child{border-bottom:none;}
+  .snap time{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap;}
+  .snap .msg{flex:1;color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:7px;font-size:13px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.22);max-width:90vw;}
   :focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
 
   @media (max-width:760px){
-    .panel,.toolbar,.board,.foot{padding-left:15px;padding-right:15px;}
-    .ev-name{font-size:21px;}
-    .rate{text-align:left;}
-    .rate .num{font-size:32px;}
+    .panel,.toolbar,.board,.foot,.saverow,.notice,.alert{padding-left:15px;padding-right:15px;}
+    .ev-name{font-size:21px;} .rate{text-align:left;} .rate .num{font-size:32px;}
     .row{grid-template-columns:80px 1fr auto;grid-template-areas:"st title act" ". meta act";row-gap:5px;}
     .row .st{grid-area:st;align-self:start;}
     .r-main{grid-area:title;}
     .r-due{grid-area:meta;font-size:12px;}
     .r-act{grid-area:act;align-self:start;}
   }
-
   @media print{
-    .toolbar,.r-act,.addrow,.tbtn{display:none !important;}
-    #app{background:#fff;}
+    .toolbar,.saverow,.r-act,.addrow,.notice,.alert{display:none !important;}
+    body{background:#fff;}
     .panel{background:#fff;color:#000;border-bottom:2px solid #000;}
-    .panel .eyebrow,.ev-meta,.legend{color:#444;}
-    .legend b,.ev-meta b{color:#000;}
+    .ev-meta,.legend{color:#444;} .legend b,.ev-meta b{color:#000;}
     .rows{break-inside:avoid;}
   }
 </style>
+</head>
+<body>
+<div id="app"><div class="boot">현황판을 불러오는 중…</div></div>
 
 <script>
 (function(){
-  "use strict";
+"use strict";
 
-  const KEY = 'event-board-v1';
-  const SESSION_KEY = 'event-board-role';
-  const app = document.getElementById('app');
+/* ══════════════════════════════════════════════
+   저장 방식: 이 저장소의 data.json 파일이 곧 데이터베이스입니다.
+   - 열람: data.json 을 그냥 읽습니다. 누구나 볼 수 있습니다.
+   - 편집: GitHub 토큰을 가진 사람만. 저장하면 커밋이 하나 생깁니다.
+   - 따라서 모든 변경은 깃 히스토리에 영구히 남고, 언제든 되돌릴 수 있습니다.
+   ══════════════════════════════════════════════ */
 
-  const STATUSES = [
-    {id:'wait',  label:'대기'},
-    {id:'doing', label:'진행중'},
-    {id:'done',  label:'완료'},
-    {id:'issue', label:'이슈'}
-  ];
-  const S = Object.fromEntries(STATUSES.map(s=>[s.id,s.label]));
+const STATUSES = [{id:'wait',label:'대기'},{id:'doing',label:'진행중'},{id:'done',label:'완료'},{id:'issue',label:'이슈'}];
+const S = Object.fromEntries(STATUSES.map(s=>[s.id,s.label]));
+const app = document.getElementById('app');
 
-  /* ── 기본 체크리스트 ───────────────────────── */
-  const SEED = [
-    ['기획·승인', ['행사 목적과 컨셉 확정','대상과 목표 참석 인원 정의','행사 일시 확정','개최 승인 및 내부 보고','전체 마스터 스케줄 수립']],
-    ['예산·계약', ['총예산안 편성 및 승인','업체 견적 비교 및 선정','계약서 작성·날인','계약금·잔금 지급 일정 확정','정산 양식 및 증빙 기준 준비']],
-    ['장소·시설', ['장소 후보 답사','대관 계약 및 사용 시간 확정','좌석·부스 배치도 작성','전기·인터넷·주차 확인','소방·안전 점검 및 인허가']],
-    ['프로그램·출연', ['세부 진행표(런다운) 확정','연사·출연자 섭외 및 계약','사회자 섭외 및 대본 작성','발표자료 취합 및 검수','리허설 일정 확정']],
-    ['홍보·모집', ['포스터·영상 등 홍보물 제작','채널별 홍보 일정 수립','참가 신청 페이지 오픈','참가자 안내 메일 발송','언론·미디어 응대 계획']],
-    ['제작·물품', ['현수막·배너·사이니지 제작','명찰과 안내 표지 제작','기념품 발주','프로그램북 인쇄','다과·케이터링 발주']],
-    ['인력·운영', ['운영 인력 편성표 작성','스태프 역할과 동선 교육','자원봉사·단기 인력 모집','무전기 및 비상 연락망 구성','비상 대응 매뉴얼 작성']],
-    ['행사 당일', ['현장 셋업 및 음향·영상 점검','최종 리허설','등록·안내 데스크 운영','진행표 대비 시간 체크','사진·영상 기록']],
-    ['사후 정리', ['철수 및 원상복구','대금 지급 및 정산 완료','참가자 만족도 설문','결과 보고서 작성','자료 아카이빙 및 감사 인사']]
-  ];
+const SEED_CATS = [
+  ['기획·승인',['행사 목적과 컨셉 확정','대상과 목표 참석 인원 정의','행사 일시 확정','개최 승인 및 내부 보고','전체 마스터 스케줄 수립']],
+  ['예산·계약',['총예산안 편성 및 승인','업체 견적 비교 및 선정','계약서 작성·날인','계약금·잔금 지급 일정 확정','정산 양식 및 증빙 기준 준비']],
+  ['장소·시설',['장소 후보 답사','대관 계약 및 사용 시간 확정','좌석·부스 배치도 작성','전기·인터넷·주차 확인','소방·안전 점검 및 인허가']],
+  ['프로그램·출연',['세부 진행표(런다운) 확정','연사·출연자 섭외 및 계약','사회자 섭외 및 대본 작성','발표자료 취합 및 검수','리허설 일정 확정']],
+  ['홍보·모집',['포스터·영상 등 홍보물 제작','채널별 홍보 일정 수립','참가 신청 페이지 오픈','참가자 안내 메일 발송','언론·미디어 응대 계획']],
+  ['제작·물품',['현수막·배너·사이니지 제작','명찰과 안내 표지 제작','기념품 발주','프로그램북 인쇄','다과·케이터링 발주']],
+  ['인력·운영',['운영 인력 편성표 작성','스태프 역할과 동선 교육','자원봉사·단기 인력 모집','무전기 및 비상 연락망 구성','비상 대응 매뉴얼 작성']],
+  ['행사 당일',['현장 셋업 및 음향·영상 점검','최종 리허설','등록·안내 데스크 운영','진행표 대비 시간 체크','사진·영상 기록']],
+  ['사후 정리',['철수 및 원상복구','대금 지급 및 정산 완료','참가자 만족도 설문','결과 보고서 작성','자료 아카이빙 및 감사 인사']]
+];
 
-  const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-3);
+const uid = () => Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-  function seedState(){
-    return {
-      event:{ name:'행사 진행 현황판', date:'', place:'', org:'' },
-      admin:{ hash:'' },
-      cats: SEED.map(([name,titles])=>({
-        id:uid(), name,
-        tasks: titles.map(t=>({id:uid(), title:t, due:'', status:'wait', memo:''}))
-      })),
-      history: [],
-      updatedAt: Date.now()
-    };
+function seedBoard(){
+  return {
+    event:{name:'행사 진행 현황판', date:'', place:'', org:''},
+    cats: SEED_CATS.map(([name,titles])=>({id:uid(),name,tasks:titles.map(t=>({id:uid(),title:t,due:'',status:'wait',memo:''}))})),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+/* ── 브라우저 보관함 (임시 초안 · 토큰) ────────── */
+const LS = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+const K_TOKEN='eb:token', K_CFG='eb:cfg', K_DRAFT='eb:draft';
+
+/* ── 저장소 설정 ──────────────────────────── */
+function detectCfg(){
+  const saved = LS.get(K_CFG);
+  if(saved){ try{ const c=JSON.parse(saved); if(c.owner&&c.repo) return c; }catch(e){} }
+  const host = location.hostname, parts = location.pathname.split('/').filter(Boolean);
+  let owner='', repo='';
+  if(/\.github\.io$/i.test(host)){
+    owner = host.replace(/\.github\.io$/i,'');
+    repo = (parts.length && !/\.[a-z]+$/i.test(parts[0])) ? parts[0] : host;
   }
+  return {owner, repo, branch:'main', path:'data.json'};
+}
 
-  /* ── 저장소 (공유/개인) ────────────────────── */
-  const mem = {};
-  const hasStore = typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+let cfg = detectCfg();
+let token = LS.get(K_TOKEN) || '';
+let board = null, sha = '', dirty = false, saving = false;
+let lastSync = 0, remoteMissing = false, loadError = '';
+let filter='all', query='', autoTimer=null;
 
-  async function loadShared(){
-    if(!hasStore) return mem[KEY] ? JSON.parse(mem[KEY]) : null;
-    try{
-      const r = await window.storage.get(KEY, true);
-      return r && r.value ? JSON.parse(r.value) : null;
-    }catch(e){ return null; }
+const isAdmin = () => !!token;
+const apiBase = () => `https://api.github.com/repos/${cfg.owner}/${cfg.repo}`;
+
+async function gh(url, opts){
+  opts = opts || {};
+  const headers = Object.assign({'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}, opts.headers||{});
+  if(token) headers.Authorization = 'Bearer ' + token;
+  return fetch(url, Object.assign({}, opts, {headers}));
+}
+function b64encode(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin=''; const CH=0x8000;
+  for(let i=0;i<bytes.length;i+=CH) bin += String.fromCharCode.apply(null, bytes.subarray(i,i+CH));
+  return btoa(bin);
+}
+function b64decode(b64){
+  const bin = atob(String(b64).replace(/\s/g,''));
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+const validBoard = o => o && o.event && Array.isArray(o.cats);
+
+/* ── 불러오기 / 저장 ──────────────────────── */
+async function pull(){
+  loadError=''; remoteMissing=false;
+  if(cfg.owner && cfg.repo && token){
+    const r = await gh(`${apiBase()}/contents/${encodeURIComponent(cfg.path)}?ref=${encodeURIComponent(cfg.branch)}&t=${Date.now()}`);
+    if(r.status===404){ remoteMissing=true; return null; }
+    if(r.status===401){ loadError='토큰이 유효하지 않습니다. 다시 등록해 주세요.'; return null; }
+    if(!r.ok){ loadError=`불러오지 못했습니다 (${r.status}).`; return null; }
+    const j = await r.json();
+    sha = j.sha;
+    const o = JSON.parse(b64decode(j.content));
+    if(!validBoard(o)){ loadError='data.json 형식이 올바르지 않습니다.'; return null; }
+    lastSync = Date.now();
+    return o;
   }
-  async function saveShared(data){
-    data.updatedAt = Date.now();
-    const raw = JSON.stringify(data);
-    if(!hasStore){ mem[KEY] = raw; return true; }
-    try{
-      const r = await window.storage.set(KEY, raw, true);
-      return !!r;
-    }catch(e){ return false; }
-  }
-  async function loadRole(){
-    if(!hasStore) return mem[SESSION_KEY] || '';
-    try{ const r = await window.storage.get(SESSION_KEY, false); return r ? r.value : ''; }
-    catch(e){ return ''; }
-  }
-  async function saveRole(v){
-    if(!hasStore){ mem[SESSION_KEY] = v; return; }
-    try{ await window.storage.set(SESSION_KEY, v, false); }catch(e){}
-  }
-  // 공유 저장소가 비어 있을 때를 대비한 개인 사본
-  const MIRROR = 'event-board-mirror';
-  let lastMirror = 0;
-  async function mirror(data, force){
-    if(!hasStore) return;
-    if(!force && Date.now() - lastMirror < 45000) return;
-    lastMirror = Date.now();
-    try{ await window.storage.set(MIRROR, JSON.stringify(stripHistory(data)), false); }catch(e){}
-  }
-  async function readMirror(){
-    if(!hasStore) return null;
-    try{ const r = await window.storage.get(MIRROR, false); return r && r.value ? JSON.parse(r.value) : null; }
-    catch(e){ return null; }
-  }
-  async function listKeys(shared){
-    if(!hasStore) return [];
-    try{ const r = await window.storage.list('', shared); return (r && r.keys) || []; }
-    catch(e){ return []; }
-  }
-  const PROBE = 'event-board-probe';
-  // 실제로 쓰고 다시 읽어서, 저장이 되는 환경인지 확인한다
-  async function probeStorage(){
-    if(!hasStore) return false;
-    try{
-      const v = 'p' + Date.now();
-      await window.storage.set(PROBE, v, true);
-      const r = await window.storage.get(PROBE, true);
-      return !!(r && r.value === v);
-    }catch(e){ return false; }
-  }
+  // 열람자: 파일을 그대로 읽는다 (토큰 불필요)
+  try{
+    const r = await fetch(`./${cfg.path}?t=${Date.now()}`, {cache:'no-store'});
+    if(r.status===404){ remoteMissing=true; return null; }
+    if(!r.ok){ loadError=`불러오지 못했습니다 (${r.status}).`; return null; }
+    const o = await r.json();
+    if(!validBoard(o)){ loadError='data.json 형식이 올바르지 않습니다.'; return null; }
+    lastSync = Date.now();
+    return o;
+  }catch(e){ loadError='data.json 을 찾지 못했습니다.'; return null; }
+}
 
-  const stripHistory = d => ({event:d.event, admin:d.admin, cats:d.cats, updatedAt:d.updatedAt});
-  const isBoard = o => o && o.cats && Array.isArray(o.cats) && o.event;
+async function push(message){
+  if(!isAdmin()){ toast('편집 권한이 없습니다.'); return false; }
+  if(!cfg.owner || !cfg.repo){ toast('저장소 설정이 비어 있습니다. 설정을 확인해 주세요.'); return false; }
+  saving = true; paintSaveRow();
+  board.updatedAt = new Date().toISOString();
+  const body = {
+    message: message || `현황판 수정 · ${new Date().toLocaleString('ko-KR')}`,
+    content: b64encode(JSON.stringify(board, null, 2)),
+    branch: cfg.branch
+  };
+  if(sha) body.sha = sha;
+  let r;
+  try{
+    r = await gh(`${apiBase()}/contents/${encodeURIComponent(cfg.path)}`, {method:'PUT', body:JSON.stringify(body)});
+  }catch(e){ saving=false; paintSaveRow(); toast('네트워크 오류로 저장하지 못했습니다. 초안은 이 브라우저에 남아 있습니다.'); return false; }
+  saving = false;
 
-  async function sha(text){
-    try{
-      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('evt::'+text));
-      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    }catch(e){
-      let h = 5381;
-      for(let i=0;i<text.length;i++) h = ((h<<5)+h+text.charCodeAt(i))|0;
-      return 'f'+(h>>>0).toString(16);
-    }
+  if(r.status===409 || r.status===422){ paintSaveRow(); conflictDialog(); return false; }
+  if(r.status===401 || r.status===403){ paintSaveRow(); toast('권한이 없습니다. 토큰의 Contents 쓰기 권한을 확인해 주세요.'); return false; }
+  if(!r.ok){ paintSaveRow(); toast(`저장 실패 (${r.status}). 초안은 이 브라우저에 남아 있습니다.`); return false; }
+
+  const j = await r.json();
+  sha = j.content.sha;
+  dirty = false; lastSync = Date.now(); remoteMissing = false;
+  LS.del(K_DRAFT);
+  render();
+  return true;
+}
+
+/* 변경이 생길 때마다: 즉시 브라우저에 초안 저장 + 저장 예약 */
+function touch(){
+  dirty = true;
+  LS.set(K_DRAFT, JSON.stringify({at:Date.now(), sha, cfg, board}));
+  paintSaveRow();
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(()=>{ if(dirty && isAdmin() && !saving) push(); }, 30000);
+}
+
+async function saveNow(){
+  if(!dirty){ toast('저장할 변경이 없습니다.'); return; }
+  const ok = await push();
+  if(ok) toast('저장했습니다. 커밋으로 기록되어 되돌릴 수 있습니다.');
+}
+
+/* ── 계산 ─────────────────────────────────── */
+const today = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
+function daysUntil(s){ if(!s) return null; const d=new Date(s+'T00:00:00'); return isNaN(d)?null:Math.round((d-today())/86400000); }
+function counts(){
+  const c={wait:0,doing:0,done:0,issue:0,total:0};
+  board.cats.forEach(k=>k.tasks.forEach(t=>{ c[t.status]=(c[t.status]||0)+1; c.total++; }));
+  return c;
+}
+function matches(t){
+  if(filter!=='all' && t.status!==filter) return false;
+  if(query && !((t.title||'')+' '+(t.memo||'')).toLowerCase().includes(query.toLowerCase())) return false;
+  return true;
+}
+
+/* ── 렌더 ─────────────────────────────────── */
+function render(){
+  const c = counts();
+  const pct = c.total ? Math.round(c.done/c.total*100) : 0;
+  const dd = daysUntil(board.event.date);
+  let ddHtml='';
+  if(dd!==null){
+    const cls = dd<0?'past':(dd<=7?'soon':'');
+    ddHtml = `<span class="dday ${cls}">${dd===0?'D-DAY':(dd>0?'D-'+dd:'D+'+Math.abs(dd))}</span>`;
   }
+  const lamps = [];
+  board.cats.forEach(k=>k.tasks.forEach(t=>lamps.push(`<span class="lamp ${t.status}"></span>`)));
+  const meta=[];
+  if(board.event.date) meta.push(`<span><b>${esc(board.event.date.replace(/-/g,'.'))}</b></span>`);
+  if(board.event.place) meta.push(`<span>${esc(board.event.place)}</span>`);
+  if(board.event.org) meta.push(`<span>주관 ${esc(board.event.org)}</span>`);
+  meta.push(`<span>총 ${c.total}개 항목</span>`);
 
-  /* ── 상태 ─────────────────────────────────── */
-  let state = null;
-  let isAdmin = false;
-  let filter = 'all';
-  let query = '';
-  let busy = false;
-  let unsaved = false;   // 공유 저장소에 아직 저장된 적 없는 상태
-  let storageOk = null;  // 저장 가능 여부 (null=확인 전)
-  let saving = false, pendingSave = false;
-  let saveState = 'idle', lastSavedAt = 0, sinceBackup = 0;
-  // 아티팩트 저장소와 무관하게, 사용자가 지정한 실제 파일에 직접 쓰는 경로
-  const canFS = typeof window !== 'undefined' && typeof window.showSaveFilePicker === 'function';
-  let fileHandle = null, fileName = '', fileState = 'none', lastFileAt = 0, fileTimer = null;
-  let autoDl = false, dlTimer = null;
-
-  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const todayStr = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
-
-  function daysUntil(dstr){
-    if(!dstr) return null;
-    const d = new Date(dstr+'T00:00:00');
-    if(isNaN(d)) return null;
-    return Math.round((d - todayStr())/86400000);
-  }
-
-  function counts(){
-    const c = {wait:0,doing:0,done:0,issue:0,total:0};
-    state.cats.forEach(cat=>cat.tasks.forEach(t=>{ c[t.status]=(c[t.status]||0)+1; c.total++; }));
-    return c;
-  }
-
-  function matches(t){
-    if(filter!=='all' && t.status!==filter) return false;
-    if(query){
-      const q = query.toLowerCase();
-      if(!((t.title||'')+' '+(t.memo||'')).toLowerCase().includes(q)) return false;
-    }
-    return true;
-  }
-
-  /* ── 렌더 ─────────────────────────────────── */
-  function render(){
-    const c = counts();
-    const pct = c.total ? Math.round(c.done/c.total*100) : 0;
-    const dd = daysUntil(state.event.date);
-    let ddHtml = '';
-    if(dd!==null){
-      const cls = dd<0 ? 'past' : (dd<=7 ? 'soon' : '');
-      const txt = dd===0 ? 'D-DAY' : (dd>0 ? 'D-'+dd : 'D+'+Math.abs(dd));
-      ddHtml = `<span class="dday ${cls}">${txt}</span>`;
-    }
-
-    const lamps = [];
-    state.cats.forEach(cat=>cat.tasks.forEach(t=>lamps.push(`<span class="lamp ${t.status}"></span>`)));
-
-    const meta = [];
-    if(state.event.date) meta.push(`<span><b>${esc(state.event.date.replace(/-/g,'.'))}</b></span>`);
-    if(state.event.place) meta.push(`<span>${esc(state.event.place)}</span>`);
-    if(state.event.org) meta.push(`<span>주관 ${esc(state.event.org)}</span>`);
-    meta.push(`<span>총 ${c.total}개 항목</span>`);
-
-    const html = `
-      <header class="panel">
-        <div class="panel-top">
-          <div style="min-width:0">
-            <div class="eyebrow">Event Status Board</div>
-            <h1 class="ev-name">${esc(state.event.name)} ${ddHtml}</h1>
-            <div class="ev-meta">${meta.join('')}</div>
-          </div>
-          <div class="rate">
-            <div class="eyebrow">완료율</div>
-            <div class="num">${pct}<span>%</span></div>
-          </div>
+  app.innerHTML = `
+    <header class="panel">
+      <div class="panel-top">
+        <div style="min-width:0">
+          <div class="eyebrow">Event Status Board</div>
+          <h1 class="ev-name">${esc(board.event.name)} ${ddHtml}</h1>
+          <div class="ev-meta">${meta.join('')}</div>
         </div>
-        <div class="lamps" role="img" aria-label="전체 ${c.total}개 항목의 진행 상태">${lamps.join('')||'<span class="lamp"></span>'}</div>
-        <div class="legend">
-          <span><i style="background:var(--done)"></i>완료 <b>${c.done}</b></span>
-          <span><i style="background:var(--doing)"></i>진행중 <b>${c.doing}</b></span>
-          <span><i style="background:var(--issue)"></i>이슈 <b>${c.issue}</b></span>
-          <span><i style="background:var(--wait)"></i>대기 <b>${c.wait}</b></span>
-        </div>
-      </header>
-
-      <div class="toolbar">
-        <div class="filters">
-          ${['all','wait','doing','issue','done'].map(f=>{
-            const lb = f==='all' ? `전체 ${c.total}` : `${S[f]} ${c[f]}`;
-            return `<button class="chip-f" data-filter="${f}" aria-pressed="${filter===f}">${lb}</button>`;
-          }).join('')}
-        </div>
-        <input class="search" id="q" type="search" placeholder="항목 검색" value="${esc(query)}" aria-label="검색">
-        <span class="spacer"></span>
-        <span class="savestate ${saveState}">${saveStateHtml()}</span>
-        <button class="tbtn" data-act="refresh">새로고침</button>
-        <button class="tbtn ${sinceBackup>=5||storageOk===false?'warn':''}" data-act="backup">백업 내려받기${sinceBackup>=5?` (${sinceBackup})`:''}</button>
-        <button class="tbtn" data-act="csv">CSV</button>
-        ${isAdmin
-          ? `<button class="tbtn" data-act="restore">백업 불러오기</button>
-             <button class="tbtn" data-act="undo">이전 상태로 되돌리기</button>
-             <button class="tbtn" data-act="editEvent">행사 정보</button>
-             <button class="tbtn" data-act="addCat">단계 추가</button>
-             <button class="tbtn on" data-act="lock">편집 중 · 잠그기</button>`
-          : `<button class="tbtn key" data-act="unlock">관리자 모드</button>`}
+        <div class="rate"><div class="eyebrow">완료율</div><div class="num">${pct}<span>%</span></div></div>
       </div>
-
-      ${storageOk === false ? `<div class="alert">
-        <span><b>이 화면은 내용을 저장하지 못합니다.</b> 새로고침하거나 창을 닫으면 지금까지 입력한 내용이 사라집니다.
-        아래 <b>파일에 저장</b>을 연결하시면 내 컴퓨터 파일에 바로 기록되어 안전합니다.</span>
-        <span class="spacer"></span>
-        <button class="btn" data-act="backup">지금 백업 내려받기</button>
-      </div>` : ''}
-
-      ${renderSaveRow()}
-
-      ${unsaved ? `<div class="notice">
-        <span><b>저장된 현황판이 없습니다.</b> 지금 보이는 건 기본 체크리스트일 뿐, 아직 아무것도 저장되지 않았습니다.
-        이전에 쓰던 내용이 있다면 백업 파일로 되살릴 수 있습니다.</span>
-        <span class="spacer"></span>
-        <button class="btn" data-act="restore">백업 파일 불러오기</button>
-        <button class="btn" data-act="findData">저장된 데이터 찾기</button>
-        <button class="btn pri" data-act="startNew">새 현황판으로 시작</button>
-      </div>` : ''}
-
-      <main class="board">${renderCats()}</main>
-
-      <div class="foot">
-        모든 사용자가 같은 현황판을 봅니다. 편집은 관리자 코드를 입력한 사람만 할 수 있고, 나머지는 열람만 가능합니다.
-        · 저장된 내용은 이 현황판을 여는 모든 사람에게 공개됩니다. 개인정보나 대외비는 담지 마세요.
-        · 관리자 코드는 간단한 편집 잠금 장치이며 보안 인증이 아닙니다.
-        <br><b style="color:var(--text)">중요한 변경 뒤에는 ‘백업 내려받기’를 눌러 .json 파일을 보관하세요.</b> 화면이 새로 만들어지거나 데이터가 비어도 그 파일로 그대로 되살릴 수 있습니다.
-        ${state.updatedAt?`<br>마지막 저장 ${new Date(state.updatedAt).toLocaleString('ko-KR')}`:''}
+      <div class="lamps" role="img" aria-label="전체 ${c.total}개 항목의 진행 상태">${lamps.join('')||'<span class="lamp"></span>'}</div>
+      <div class="legend">
+        <span><i style="background:var(--done)"></i>완료 <b>${c.done}</b></span>
+        <span><i style="background:var(--doing)"></i>진행중 <b>${c.doing}</b></span>
+        <span><i style="background:var(--issue)"></i>이슈 <b>${c.issue}</b></span>
+        <span><i style="background:var(--wait)"></i>대기 <b>${c.wait}</b></span>
       </div>
-    `;
-    app.innerHTML = html;
-    bind();
-  }
+    </header>
 
-  function renderCats(){
-    let any = false;
-    const out = state.cats.map((cat, i)=>{
-      const shown = cat.tasks.filter(matches);
-      const done = cat.tasks.filter(t=>t.status==='done').length;
-      if(!shown.length && !isAdmin) return '';
-      if(shown.length) any = true;
-      const rows = shown.map(t=>row(cat,t)).join('') ||
-        `<div class="empty" style="padding:18px;font-size:13px">조건에 맞는 항목이 없습니다.</div>`;
-      return `
-        <section class="cat">
-          <div class="cat-head">
-            <span class="cat-no">${String(i+1).padStart(2,'0')}</span>
-            <span class="cat-name">${esc(cat.name)}</span>
-            <span class="cat-rule"></span>
-            <span class="cat-count ${done===cat.tasks.length&&cat.tasks.length?'full':''}">${done}/${cat.tasks.length}</span>
-            ${isAdmin?`<span class="r-act">
-              <button class="ibtn" data-act="moveCat" data-cat="${cat.id}" data-dir="-1" ${i===0?'disabled':''} title="위로 이동" aria-label="단계를 위로 이동">↑</button>
-              <button class="ibtn" data-act="moveCat" data-cat="${cat.id}" data-dir="1" ${i===state.cats.length-1?'disabled':''} title="아래로 이동" aria-label="단계를 아래로 이동">↓</button>
-              <button class="ibtn" data-act="editCat" data-cat="${cat.id}" title="단계 이름 수정" aria-label="단계 이름 수정">✎</button>
-              <button class="ibtn del" data-act="delCat" data-cat="${cat.id}" title="단계 삭제" aria-label="단계 삭제">×</button>
-            </span>`:''}
-          </div>
-          <div class="rows">
-            ${rows}
-            ${isAdmin?`<div class="addrow"><button data-act="addTask" data-cat="${cat.id}">+ 항목 추가</button></div>`:''}
-          </div>
-        </section>`;
-    }).join('');
+    <div id="saverow">${saveRowHtml()}</div>
 
-    if(!any && !isAdmin) return `<div class="empty">조건에 맞는 항목이 없습니다.</div>`;
-    return out;
-  }
+    ${loadError?`<div class="alert"><span><b>${esc(loadError)}</b></span><span class="spacer"></span><button class="btn" data-act="settings">저장소 설정</button></div>`:''}
 
-  function row(cat,t){
-    const dd = daysUntil(t.due);
-    let due = '—', dueCls='';
-    if(t.due){
-      due = t.due.slice(5).replace('-','/');
-      if(dd!==null && t.status!=='done'){
-        if(dd<0){ due += ` (${Math.abs(dd)}일 지남)`; dueCls='late'; }
-        else if(dd<=3){ due += ` (D-${dd})`; dueCls='late'; }
-      }
-    }
-    const stEl = isAdmin
-      ? `<button class="st ${t.status}" data-act="cycle" data-cat="${cat.id}" data-task="${t.id}" title="클릭하면 상태가 바뀝니다">${S[t.status]}</button>`
-      : `<span class="st ${t.status}">${S[t.status]}</span>`;
-
-    return `
-      <div class="row ${t.status==='done'?'done':''}">
-        ${stEl}
-        <div class="r-main">
-          <div class="r-title">${esc(t.title)}</div>
-          ${t.memo?`<div class="r-memo">${esc(t.memo)}</div>`:''}
-        </div>
-        <div class="r-due ${dueCls}">${due}</div>
-        <div class="r-act">
-          ${isAdmin?`
-            <button class="ibtn" data-act="editTask" data-cat="${cat.id}" data-task="${t.id}" title="수정" aria-label="항목 수정">✎</button>
-            <button class="ibtn del" data-act="delTask" data-cat="${cat.id}" data-task="${t.id}" title="삭제" aria-label="항목 삭제">×</button>`:''}
-        </div>
-      </div>`;
-  }
-
-  /* ── 이벤트 바인딩 ─────────────────────────── */
-  function bind(){
-    app.querySelectorAll('[data-filter]').forEach(b=>{
-      b.onclick = ()=>{ filter = b.dataset.filter; render(); };
-    });
-    const q = app.querySelector('#q');
-    if(q){
-      q.oninput = ()=>{ query = q.value; const p=q.selectionStart; render();
-        const n=app.querySelector('#q'); if(n){ n.focus(); n.setSelectionRange(p,p); } };
-    }
-    app.querySelectorAll('[data-act]').forEach(el=>{
-      el.onclick = ()=>handle(el.dataset);
-    });
-  }
-
-  const findCat = id => state.cats.find(c=>c.id===id);
-  const findTask = (cid,tid) => { const c=findCat(cid); return c ? c.tasks.find(t=>t.id===tid) : null; };
-
-  async function handle(d){
-    const a = d.act;
-    if(a==='refresh') return refresh();
-    if(a==='csv') return exportCsv();
-    if(a==='backup') return exportBackup();
-    if(a==='fileConnect') return connectFile();
-    if(a==='fileOpen') return openFile();
-    if(a==='fileSaveNow') return writeFile().then(ok=>{ if(ok) toast('파일에 저장했습니다.'); });
-    if(a==='fileDisconnect'){ fileHandle=null; fileName=''; fileState='none'; render(); toast('파일 연결을 해제했습니다.'); return; }
-    if(a==='toggleAuto') return toggleAuto();
-    if(a==='selftest') return selfTest();
-    if(a==='restore') return importBackup();
-    if(a==='findData') return findDataDialog();
-    if(a==='startNew'){ unsaved = false; await commit(); render(); toast('새 현황판을 저장했습니다.'); return; }
-    if(a==='unlock') return unlockDialog();
-    if(a==='lock'){ isAdmin=false; await saveRole(''); render(); toast('열람 모드로 돌아왔습니다.'); return; }
-    if(!isAdmin) return;
-
-    if(a==='cycle'){
-      const t = findTask(d.cat,d.task); if(!t) return;
-      const order = ['wait','doing','done','issue'];
-      t.status = order[(order.indexOf(t.status)+1)%order.length];
-      render(); return commit();
-    }
-    if(a==='editTask') return taskDialog(d.cat, d.task);
-    if(a==='addTask')  return taskDialog(d.cat, null);
-    if(a==='delTask'){
-      const c = findCat(d.cat), t = findTask(d.cat,d.task); if(!c||!t) return;
-      confirmDialog('항목을 삭제할까요?', t.title, '삭제', ()=>{
-        c.tasks = c.tasks.filter(x=>x.id!==d.task); render(); commit(); toast('삭제했습니다.');
-      });
-      return;
-    }
-    if(a==='moveCat'){
-      const i = state.cats.findIndex(c=>c.id===d.cat);
-      const j = i + Number(d.dir);
-      if(i<0 || j<0 || j>=state.cats.length) return;
-      const [moved] = state.cats.splice(i,1);
-      state.cats.splice(j,0,moved);
-      render(); return commit();
-    }
-    if(a==='addCat')  return catDialog(null);
-    if(a==='editCat') return catDialog(d.cat);
-    if(a==='delCat'){
-      const c = findCat(d.cat); if(!c) return;
-      confirmDialog('단계를 삭제할까요?', `‘${c.name}’ 단계와 하위 항목 ${c.tasks.length}개가 함께 사라집니다.`, '삭제', ()=>{
-        state.cats = state.cats.filter(x=>x.id!==d.cat); render(); commit(); toast('삭제했습니다.');
-      });
-      return;
-    }
-    if(a==='undo') return undoDialog();
-    if(a==='editEvent') return eventDialog();
-  }
-
-  // 저장 요청은 절대 버리지 않는다. 저장 중이면 대기시켰다가 반드시 다시 쓴다.
-  function commit(){
-    pendingSave = true;
-    sinceBackup++;
-    setSaveState('saving');
-    saveLoop();
-    // 연결된 파일에도 기록 (아티팩트 저장소와 독립)
-    if(fileHandle){ clearTimeout(fileTimer); fileTimer = setTimeout(()=>writeFile(), 900); }
-    // 자동 백업이 켜져 있으면 변경이 멈춘 뒤 파일을 내려받는다
-    if(autoDl){ clearTimeout(dlTimer); dlTimer = setTimeout(()=>exportBackup(true), 20000); }
-  }
-
-  async function saveLoop(){
-    if(saving) return;
-    saving = true; busy = true;
-    while(pendingSave){
-      pendingSave = false;
-      if(!state.history) state.history = [];
-      state.history.push({at:Date.now(), event:JSON.parse(JSON.stringify(state.event)), cats:JSON.parse(JSON.stringify(state.cats))});
-      if(state.history.length > 10) state.history = state.history.slice(-10);
-      let ok = await saveShared(state);
-      if(!ok){ await new Promise(r=>setTimeout(r,800)); ok = await saveShared(state); } // 한 번 재시도
-      if(ok){
-        unsaved = false; lastSavedAt = Date.now();
-        setSaveState('saved');
-        await mirror(state);
-      }else{
-        setSaveState('failed');
-      }
-    }
-    saving = false; busy = false;
-  }
-
-  function setSaveState(s){
-    saveState = s;
-    const el = document.querySelector('.savestate');
-    if(el){ el.className = 'savestate ' + s; el.innerHTML = saveStateHtml(); }
-  }
-
-  function saveStateHtml(){
-    const t = lastSavedAt ? new Date(lastSavedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
-    const txt = saveState==='saving' ? '저장 중…'
-      : saveState==='saved' ? `저장됨 ${t}`
-      : saveState==='failed' ? '저장 실패 · 백업하세요'
-      : (storageOk === false ? '저장 불가' : (unsaved ? '저장 안 됨' : (lastSavedAt?`저장됨 ${t}`:'대기')));
-    return `<i></i>${txt}`;
-  }
-
-  async function refresh(){
-    const fresh = await loadShared();
-    if(fresh){ state = fresh; render(); toast('최신 상태를 불러왔습니다.'); }
-    else toast('불러올 데이터가 없습니다.');
-  }
-
-  /* ── 모달 ─────────────────────────────────── */
-  function modal(html, setup){
-    close();
-    const ov = document.createElement('div');
-    ov.className = 'overlay';
-    ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
-    document.body.appendChild(ov);
-    ov.addEventListener('mousedown', e=>{ if(e.target===ov) close(); });
-    document.addEventListener('keydown', onEsc);
-    if(setup) setup(ov);
-    const f = ov.querySelector('input,textarea,select'); if(f) f.focus();
-    return ov;
-  }
-  function onEsc(e){ if(e.key==='Escape') close(); }
-  function close(){
-    document.querySelectorAll('.overlay').forEach(o=>o.remove());
-    document.removeEventListener('keydown', onEsc);
-  }
-  function toast(msg){
-    document.querySelectorAll('.toast').forEach(t=>t.remove());
-    const el = document.createElement('div');
-    el.className = 'toast'; el.textContent = msg;
-    document.body.appendChild(el);
-    setTimeout(()=>el.remove(), 2600);
-  }
-  function confirmDialog(title, desc, label, onOk){
-    modal(`<h3>${esc(title)}</h3><div class="body"><p style="margin:0 0 4px;font-size:13.5px;color:var(--muted)">${esc(desc)}</p></div>
-      <div class="acts"><button class="btn ghost" data-x="c">취소</button><button class="btn danger" data-x="o">${esc(label)}</button></div>`,
-      ov=>{
-        ov.querySelector('[data-x="c"]').onclick = close;
-        ov.querySelector('[data-x="o"]').onclick = ()=>{ close(); onOk(); };
-      });
-  }
-
-  function unlockDialog(){
-    const first = !state.admin.hash;
-    modal(`
-      <h3>${first?'관리자 코드 설정':'관리자 모드'}</h3>
-      <div class="body">
-        <div class="fld">
-          <label>관리자 코드</label>
-          <input id="code" type="password" autocomplete="off" placeholder="${first?'새로 사용할 코드':'코드 입력'}">
-          <div class="hint">${first
-            ? '이 현황판을 처음 여셨습니다. 편집 권한에 쓸 코드를 정해 주세요. 코드를 아는 사람만 내용을 고칠 수 있습니다.'
-            : '코드를 아는 사람만 편집할 수 있습니다. 나머지 사용자는 그대로 열람할 수 있습니다.'}</div>
-        </div>
-        <div id="err"></div>
-      </div>
-      <div class="acts">
-        <button class="btn ghost" data-x="c">취소</button>
-        <button class="btn pri" data-x="o">${first?'코드 설정하고 시작':'편집 시작'}</button>
-      </div>`, ov=>{
-      const input = ov.querySelector('#code');
-      const go = async ()=>{
-        const v = input.value.trim();
-        if(v.length < 4){ ov.querySelector('#err').innerHTML = '<div class="err">코드는 4자 이상으로 정해 주세요.</div>'; return; }
-        if(first){
-          state.admin.hash = await sha(v);
-          isAdmin = true; await saveRole('admin'); close(); render(); await commit();
-          toast('관리자 코드를 설정했습니다. 이제 편집할 수 있습니다.');
-        }else{
-          const h = await sha(v);
-          if(h !== state.admin.hash){ ov.querySelector('#err').innerHTML = '<div class="err">코드가 맞지 않습니다. 다시 입력해 주세요.</div>'; input.select(); return; }
-          isAdmin = true; await saveRole('admin'); close(); render();
-          toast('편집 모드입니다.');
-        }
-      };
-      input.onkeydown = e=>{ if(e.key==='Enter') go(); };
-      ov.querySelector('[data-x="c"]').onclick = close;
-      ov.querySelector('[data-x="o"]').onclick = go;
-    });
-  }
-
-  function taskDialog(catId, taskId){
-    const cat = findCat(catId); if(!cat) return;
-    const t = taskId ? findTask(catId, taskId) : {title:'',due:'',status:'wait',memo:''};
-    modal(`
-      <h3>${taskId?'항목 수정':'항목 추가'}</h3>
-      <div class="body">
-        <div class="fld"><label>할 일</label><input id="f-title" value="${esc(t.title)}" placeholder="예: 대관 계약 및 사용 시간 확정"></div>
-        <div class="fld"><label>상태</label>
-          <div class="segs">${STATUSES.map(s=>`<button class="st ${s.id}" data-st="${s.id}" aria-pressed="${t.status===s.id}">${s.label}</button>`).join('')}</div>
-        </div>
-        <div class="fld"><label>마감일</label><input id="f-due" type="date" value="${esc(t.due)}"></div>
-        <div class="fld"><label>메모</label><textarea id="f-memo" placeholder="진행 상황, 남은 확인 사항">${esc(t.memo)}</textarea></div>
-        <div id="err"></div>
-      </div>
-      <div class="acts">
-        <button class="btn ghost" data-x="c">취소</button>
-        <button class="btn pri" data-x="o">저장</button>
-      </div>`, ov=>{
-      let st = t.status;
-      ov.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{
-        st = b.dataset.st;
-        ov.querySelectorAll('[data-st]').forEach(x=>x.setAttribute('aria-pressed', x.dataset.st===st));
-      });
-      ov.querySelector('[data-x="c"]').onclick = close;
-      ov.querySelector('[data-x="o"]').onclick = ()=>{
-        const title = ov.querySelector('#f-title').value.trim();
-        if(!title){ ov.querySelector('#err').innerHTML='<div class="err">할 일을 입력해 주세요.</div>'; return; }
-        const data = {
-          title, status:st,
-          due:   ov.querySelector('#f-due').value,
-          memo:  ov.querySelector('#f-memo').value.trim()
-        };
-        if(taskId){ Object.assign(findTask(catId,taskId), data); }
-        else { cat.tasks.push(Object.assign({id:uid()}, data)); }
-        close(); render(); commit(); toast(taskId?'수정했습니다.':'추가했습니다.');
-      };
-    });
-  }
-
-  function catDialog(catId){
-    const cat = catId ? findCat(catId) : null;
-    modal(`
-      <h3>${cat?'단계 이름 수정':'단계 추가'}</h3>
-      <div class="body">
-        <div class="fld"><label>단계 이름</label><input id="f-cat" value="${cat?esc(cat.name):''}" placeholder="예: 협찬·후원">
-        <div class="hint">단계는 위에서 아래로 진행 순서대로 표시됩니다.</div></div>
-        ${cat?'':`<div class="fld"><label>넣을 위치</label>
-          <select id="f-pos">
-            <option value="0">맨 위</option>
-            ${state.cats.map((c,i)=>`<option value="${i+1}" ${i===state.cats.length-1?'selected':''}>‘${esc(c.name)}’ 다음</option>`).join('')}
-          </select>
-          <div class="hint">추가한 뒤에도 단계 옆 ↑ ↓ 버튼으로 순서를 바꿀 수 있습니다.</div></div>`}
-        <div id="err"></div>
-      </div>
-      <div class="acts"><button class="btn ghost" data-x="c">취소</button><button class="btn pri" data-x="o">저장</button></div>`, ov=>{
-      const go = ()=>{
-        const v = ov.querySelector('#f-cat').value.trim();
-        if(!v){ ov.querySelector('#err').innerHTML='<div class="err">단계 이름을 입력해 주세요.</div>'; return; }
-        if(cat){ cat.name = v; }
-        else {
-          const posEl = ov.querySelector('#f-pos');
-          const pos = posEl ? Number(posEl.value) : state.cats.length;
-          state.cats.splice(pos, 0, {id:uid(), name:v, tasks:[]});
-        }
-        close(); render(); commit(); toast('저장했습니다.');
-      };
-      ov.querySelector('#f-cat').onkeydown = e=>{ if(e.key==='Enter') go(); };
-      ov.querySelector('[data-x="c"]').onclick = close;
-      ov.querySelector('[data-x="o"]').onclick = go;
-    });
-  }
-
-  function eventDialog(){
-    const e = state.event;
-    modal(`
-      <h3>행사 정보</h3>
-      <div class="body">
-        <div class="fld"><label>행사명</label><input id="e-name" value="${esc(e.name)}"></div>
-        <div style="display:flex;gap:10px">
-          <div class="fld" style="flex:1"><label>행사일</label><input id="e-date" type="date" value="${esc(e.date)}"></div>
-          <div class="fld" style="flex:1"><label>주관</label><input id="e-org" value="${esc(e.org)}" placeholder="부서·단체"></div>
-        </div>
-        <div class="fld"><label>장소</label><input id="e-place" value="${esc(e.place)}" placeholder="예: 세종문화회관 M씨어터"></div>
-        <hr style="border:none;border-top:1px solid var(--line-soft);margin:18px 0 14px">
-        <div class="fld">
-          <label>관리자 코드 변경</label>
-          <input id="e-code" type="password" autocomplete="off" placeholder="비워두면 그대로 유지">
-          <div class="hint">코드를 바꾸면 기존 코드로 열어둔 다른 사람도 다음 접속부터는 새 코드가 필요합니다.</div>
-        </div>
-      </div>
-      <div class="acts">
-        <button class="btn danger" data-x="reset" style="margin-right:auto">전체 초기화</button>
-        <button class="btn ghost" data-x="c">취소</button>
-        <button class="btn pri" data-x="o">저장</button>
-      </div>`, ov=>{
-      ov.querySelector('[data-x="c"]').onclick = close;
-      ov.querySelector('[data-x="reset"]').onclick = ()=>{
-        confirmDialog('현황판을 초기화할까요?', '모든 항목과 진행 상황이 기본 체크리스트로 되돌아갑니다. 되돌릴 수 없습니다.', '초기화', async ()=>{
-          const keep = state.admin.hash;
-          state = seedState(); state.admin.hash = keep;
-          render(); await commit(); toast('기본 체크리스트로 초기화했습니다.');
-        });
-      };
-      ov.querySelector('[data-x="o"]').onclick = async ()=>{
-        e.name  = ov.querySelector('#e-name').value.trim() || '행사 진행 현황판';
-        e.date  = ov.querySelector('#e-date').value;
-        e.org   = ov.querySelector('#e-org').value.trim();
-        e.place = ov.querySelector('#e-place').value.trim();
-        const nc = ov.querySelector('#e-code').value.trim();
-        if(nc){
-          if(nc.length < 4){ toast('코드는 4자 이상이어야 합니다.'); return; }
-          state.admin.hash = await sha(nc);
-        }
-        close(); render(); await commit(); toast('행사 정보를 저장했습니다.');
-      };
-    });
-  }
-
-  function renderSaveRow(){
-    const t = lastFileAt ? new Date(lastFileAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
-    let filePill, fileBtns;
-    if(fileState === 'ok'){
-      filePill = `<span class="pill ok" id="filepill">● 파일에 저장 중 · ${esc(fileName)}${t?` · ${t}`:''}</span>`;
-      fileBtns = `<button class="sbtn" data-act="fileSaveNow">지금 파일에 쓰기</button>
-                  <button class="sbtn" data-act="fileDisconnect">연결 해제</button>`;
-    }else if(!canFS){
-      filePill = `<span class="pill warnp" id="filepill">파일 직접 저장 미지원 브라우저</span>`;
-      fileBtns = `<button class="sbtn" data-act="toggleAuto">${autoDl?'자동 백업 끄기':'자동 백업 켜기'}</button>`;
-    }else{
-      filePill = `<span class="pill ${storageOk===false?'bad':''}" id="filepill">파일에 저장: 연결 안 됨</span>`;
-      fileBtns = `<button class="sbtn go" data-act="fileConnect">파일에 저장 연결</button>
-                  <button class="sbtn" data-act="fileOpen">저장한 파일 열기</button>`;
-    }
-    const storePill = storageOk === false
-      ? `<span class="pill bad">이 화면 저장소: 사용 불가</span>`
-      : storageOk === true
-        ? `<span class="pill ok">이 화면 저장소: 정상</span>`
-        : `<span class="pill">이 화면 저장소: 확인 중</span>`;
-
-    return `<div class="saverow">
-      ${filePill}${fileBtns}
+    ${remoteMissing?`<div class="notice">
+      <span><b>저장소에 ${esc(cfg.path)} 파일이 아직 없습니다.</b> 지금 보이는 건 기본 체크리스트이며 저장되지 않은 상태입니다.</span>
       <span class="spacer"></span>
-      ${autoDl?`<span class="pill warnp">자동 백업 켜짐</span>`:''}
-      ${storePill}
-      <button class="sbtn" data-act="selftest">저장 검사</button>
+      ${isAdmin()?`<button class="btn pri" data-act="createFile">지금 만들기</button>`:`<span>관리자가 만들어야 합니다.</span>`}
+    </div>`:''}
+
+    <div class="toolbar">
+      <div class="filters">
+        ${['all','wait','doing','issue','done'].map(f=>`<button class="chip-f" data-filter="${f}" aria-pressed="${filter===f}">${f==='all'?`전체 ${c.total}`:`${S[f]} ${c[f]}`}</button>`).join('')}
+      </div>
+      <input class="search" id="q" type="search" placeholder="항목 검색" value="${esc(query)}" aria-label="검색">
+      <span class="spacer"></span>
+      <button class="tbtn" data-act="pull">최신 불러오기</button>
+      <button class="tbtn" data-act="history">변경 기록</button>
+      <button class="tbtn" data-act="csv">CSV</button>
+      ${isAdmin()
+        ? `<button class="tbtn" data-act="editEvent">행사 정보</button>
+           <button class="tbtn" data-act="addCat">단계 추가</button>
+           <button class="tbtn on" data-act="signout">편집 중 · 나가기</button>`
+        : `<button class="tbtn key" data-act="signin">관리자 로그인</button>`}
+    </div>
+
+    <main class="board">${catsHtml()}</main>
+
+    <div class="foot">
+      이 현황판의 내용은 저장소의 <b>${esc(cfg.path)}</b> 파일에 저장됩니다. 수정할 때마다 커밋이 하나 생기므로 모든 변경 이력이 남고 언제든 되돌릴 수 있습니다.
+      · 열람은 누구나, 수정은 저장소 쓰기 권한을 가진 사람만 가능합니다.
+      · <b>저장소가 공개(Public)이므로 여기 적는 내용은 인터넷에 공개됩니다.</b> 개인정보·연락처·계약 금액 등 민감한 정보는 적지 마세요.
+      ${board.updatedAt?`<br>마지막 저장 ${new Date(board.updatedAt).toLocaleString('ko-KR')}`:''}
     </div>`;
-  }
+  bind();
+}
 
-  async function connectFile(){
-    if(!canFS){ toast('이 브라우저에서는 파일 직접 저장을 쓸 수 없습니다. 자동 백업을 켜 주세요.'); return; }
-    try{
-      fileHandle = await window.showSaveFilePicker({
-        suggestedName: `${state.event.name||'행사현황판'}.json`,
-        types:[{description:'행사 현황판', accept:{'application/json':['.json']}}]
-      });
-      fileName = fileHandle.name;
-      fileState = 'ok';
-      await writeFile();
-      render();
-      toast('연결했습니다. 이제 바꿀 때마다 이 파일에 바로 기록됩니다.');
-    }catch(e){
-      if(e && e.name === 'AbortError') return;
-      fileState = 'blocked'; fileHandle = null; render();
-      toast('이 환경에서는 파일 직접 저장이 막혀 있습니다. 자동 백업을 켜 주세요.');
-    }
-  }
+function saveRowHtml(){
+  const t = lastSync ? new Date(lastSync).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
+  let pill;
+  if(saving) pill = `<span class="pill warnp">저장 중…</span>`;
+  else if(dirty) pill = `<span class="pill warnp">저장 안 된 변경 있음</span>`;
+  else if(lastSync) pill = `<span class="pill ok">● 저장소와 일치 · ${t}</span>`;
+  else pill = `<span class="pill">확인 중</span>`;
 
-  async function openFile(){
-    if(!canFS){ toast('이 브라우저에서는 지원하지 않습니다. ‘백업 불러오기’를 이용하세요.'); return; }
-    try{
-      const [h] = await window.showOpenFilePicker({types:[{description:'행사 현황판', accept:{'application/json':['.json']}}]});
-      const board = parseBoard(await (await h.getFile()).text());
-      if(!board){ toast('현황판 파일이 아닙니다.'); return; }
-      fileHandle = h; fileName = h.name; fileState = 'ok';
-      applyBoard(board);
-    }catch(e){ if(e && e.name !== 'AbortError') toast('파일을 열지 못했습니다.'); }
-  }
+  const repo = (cfg.owner&&cfg.repo) ? `${esc(cfg.owner)}/${esc(cfg.repo)}` : '설정 필요';
+  return `<div class="saverow">
+    ${pill}
+    ${isAdmin()?`<button class="sbtn go" data-act="save" ${dirty&&!saving?'':'disabled'}>지금 저장(커밋)</button>`:`<span class="pill">열람 전용</span>`}
+    <span class="spacer"></span>
+    <span class="pill">${repo} · ${esc(cfg.branch)}</span>
+    <button class="sbtn" data-act="backup">백업 내려받기</button>
+    ${isAdmin()?`<button class="sbtn" data-act="restore">백업 불러오기</button>`:''}
+    <button class="sbtn" data-act="settings">설정</button>
+  </div>`;
+}
+function paintSaveRow(){ const el=document.getElementById('saverow'); if(el){ el.innerHTML=saveRowHtml(); bind(); } }
 
-  async function writeFile(){
-    if(!fileHandle) return false;
-    try{
-      if(fileHandle.queryPermission){
-        let p = await fileHandle.queryPermission({mode:'readwrite'});
-        if(p !== 'granted' && fileHandle.requestPermission) p = await fileHandle.requestPermission({mode:'readwrite'});
-        if(p !== 'granted'){ fileState = 'blocked'; render(); return false; }
-      }
-      const w = await fileHandle.createWritable();
-      await w.write(JSON.stringify({kind:'event-board', savedAt:new Date().toISOString(), board:stripHistory(state)}, null, 2));
-      await w.close();
-      lastFileAt = Date.now(); fileState = 'ok'; sinceBackup = 0;
-      const pill = document.getElementById('filepill');
-      if(pill){
-        pill.className = 'pill ok';
-        pill.textContent = `● 파일에 저장 중 · ${fileName} · ${new Date(lastFileAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
-      }
-      return true;
-    }catch(e){
-      fileState = 'error'; render();
-      toast('파일에 쓰지 못했습니다. 백업 내려받기로 보관해 주세요.');
-      return false;
-    }
-  }
-
-  function selfTest(){
-    modal(`<h3>저장 검사</h3><div class="body"><p style="font-size:13px;color:var(--muted);margin:0">검사 중…</p></div>
-      <div class="acts"><button class="btn ghost" data-x="c">닫기</button></div>`, async ov=>{
-      ov.querySelector('[data-x="c"]').onclick = close;
-      const ok = await probeStorage();
-      storageOk = ok;
-      const fileOk = fileState === 'ok' ? await writeFile() : null;
-      const lines = [];
-      lines.push(ok
-        ? '<div class="snap"><span class="pill ok">정상</span><span>이 화면의 저장소에 쓰고 다시 읽는 데 성공했습니다.</span></div>'
-        : '<div class="snap"><span class="pill bad">불가</span><span>이 화면의 저장소는 동작하지 않습니다. 새로고침하면 내용이 사라집니다.</span></div>');
-      lines.push(fileOk === true
-        ? `<div class="snap"><span class="pill ok">정상</span><span>‘${esc(fileName)}’ 파일에 기록했습니다. 이 경로가 가장 안전합니다.</span></div>`
-        : fileOk === false
-          ? '<div class="snap"><span class="pill bad">실패</span><span>연결된 파일에 쓰지 못했습니다. 다시 연결해 주세요.</span></div>'
-          : '<div class="snap"><span class="pill warnp">미연결</span><span>파일에 저장이 연결되지 않았습니다. 연결하면 무슨 일이 있어도 안전합니다.</span></div>');
-      const verdict = (ok || fileOk === true)
-        ? '<p style="font-size:13.5px;font-weight:700;margin:0 0 10px;color:#1E6A52">작업하셔도 됩니다. 내용이 보관됩니다.</p>'
-        : '<p style="font-size:13.5px;font-weight:700;margin:0 0 10px;color:#9C2F26">지금 작업하면 잃습니다. 파일에 저장을 먼저 연결하거나 자동 백업을 켜 주세요.</p>';
-      ov.querySelector('.body').innerHTML = verdict + lines.join('');
-      render();
-    });
-  }
-
-  function toggleAuto(){
-    autoDl = !autoDl;
-    render();
-    toast(autoDl ? '변경이 멈추면 20초 뒤 백업 파일이 자동으로 내려받아집니다.' : '자동 백업을 껐습니다.');
-    if(autoDl) exportBackup(true);
-  }
-
-  /* ── 백업 · 복원 ──────────────────────────── */
-  function download(name, text, type){
-    const url = URL.createObjectURL(new Blob([text],{type:type}));
-    const a = document.createElement('a');
-    a.href = url; a.download = name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  }
-
-  function stamp(){
-    const d = new Date(), p = n => String(n).padStart(2,'0');
-    return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
-  }
-
-  function exportBackup(silent){
-    const payload = JSON.stringify({kind:'event-board', savedAt:new Date().toISOString(), board:stripHistory(state)}, null, 2);
-    download(`${state.event.name||'행사현황판'}-백업-${stamp()}.json`, payload, 'application/json');
-    sinceBackup = 0;
-    if(silent){ const b = document.querySelector('[data-act="backup"]'); if(b){ b.className='tbtn'; b.textContent='백업 내려받기'; } return; }
-    render();
-    toast('백업 파일을 내려받았습니다. 이 파일만 있으면 언제든 되살릴 수 있습니다.');
-  }
-
-  function applyBoard(board){
-    const n = board.cats.reduce((s,c)=>s+c.tasks.length,0);
-    confirmDialog('백업을 불러올까요?', `‘${board.event.name||'제목 없음'}’ · ${board.cats.length}단계 ${n}개 항목으로 지금 화면을 덮어씁니다. 되돌리기에서 현재 상태로 돌아올 수 있습니다.`, '불러오기', async ()=>{
-      const keepHash = state.admin && state.admin.hash;
-      state.event = board.event;
-      state.cats  = board.cats;
-      if(!keepHash && board.admin) state.admin = board.admin;
-      unsaved = false;
-      render(); commit(); await mirror(state, true);
-      toast('백업을 되살렸습니다.');
-    });
-  }
-
-  function parseBoard(text){
-    try{
-      const p = JSON.parse(text);
-      return isBoard(p) ? p : (isBoard(p.board) ? p.board : null);
-    }catch(e){ return null; }
-  }
-
-  function importBackup(){
-    modal(`
-      <h3>백업 불러오기</h3>
-      <div class="body">
-        <div class="fld">
-          <label>백업 파일 선택</label>
-          <button class="btn" id="pick" style="width:100%">.json 파일 고르기</button>
-          <div class="hint">‘백업 내려받기’로 저장해 둔 파일을 고르세요.</div>
-        </div>
-        <div class="fld">
-          <label>또는 백업 내용 붙여넣기</label>
-          <textarea id="paste" placeholder="백업 파일을 열어서 전체를 복사한 뒤 여기에 붙여넣으세요"></textarea>
-        </div>
-        <div id="err"></div>
+function catsHtml(){
+  let any=false;
+  const out = board.cats.map((cat,i)=>{
+    const shown = cat.tasks.filter(matches);
+    const done = cat.tasks.filter(t=>t.status==='done').length;
+    if(!shown.length && !isAdmin()) return '';
+    if(shown.length) any=true;
+    const rows = shown.map(t=>rowHtml(cat,t)).join('') || `<div class="empty" style="padding:18px;font-size:13px">조건에 맞는 항목이 없습니다.</div>`;
+    return `<section class="cat">
+      <div class="cat-head">
+        <span class="cat-no">${String(i+1).padStart(2,'0')}</span>
+        <span class="cat-name">${esc(cat.name)}</span>
+        <span class="cat-rule"></span>
+        <span class="cat-count ${done===cat.tasks.length&&cat.tasks.length?'full':''}">${done}/${cat.tasks.length}</span>
+        ${isAdmin()?`<span class="r-act">
+          <button class="ibtn" data-act="moveCat" data-cat="${cat.id}" data-dir="-1" ${i===0?'disabled':''} title="위로">↑</button>
+          <button class="ibtn" data-act="moveCat" data-cat="${cat.id}" data-dir="1" ${i===board.cats.length-1?'disabled':''} title="아래로">↓</button>
+          <button class="ibtn" data-act="editCat" data-cat="${cat.id}" title="이름 수정">✎</button>
+          <button class="ibtn del" data-act="delCat" data-cat="${cat.id}" title="단계 삭제">×</button>
+        </span>`:''}
       </div>
-      <div class="acts">
-        <button class="btn ghost" data-x="c">취소</button>
-        <button class="btn pri" data-x="o">붙여넣은 내용으로 복원</button>
-      </div>`, ov=>{
-      ov.querySelector('[data-x="c"]').onclick = close;
-      ov.querySelector('#pick').onclick = ()=>{
-        const input = document.createElement('input');
-        input.type = 'file'; input.accept = 'application/json,.json';
-        input.onchange = ()=>{
-          const f = input.files && input.files[0];
-          if(!f) return;
-          const r = new FileReader();
-          r.onload = ()=>{
-            const board = parseBoard(r.result);
-            if(!board){ ov.querySelector('#err').innerHTML = '<div class="err">현황판 백업 파일이 아닙니다.</div>'; return; }
-            close(); applyBoard(board);
-          };
-          r.readAsText(f);
-        };
-        input.click();
-      };
-      ov.querySelector('[data-x="o"]').onclick = ()=>{
-        const board = parseBoard(ov.querySelector('#paste').value.trim());
-        if(!board){ ov.querySelector('#err').innerHTML = '<div class="err">내용을 읽지 못했습니다. 백업 파일 전체를 복사해 붙여넣어 주세요.</div>'; return; }
-        close(); applyBoard(board);
-      };
-    });
-  }
+      <div class="rows">${rows}${isAdmin()?`<div class="addrow"><button data-act="addTask" data-cat="${cat.id}">+ 항목 추가</button></div>`:''}</div>
+    </section>`;
+  }).join('');
+  return (!any && !isAdmin()) ? `<div class="empty">조건에 맞는 항목이 없습니다.</div>` : out;
+}
 
-  function undoDialog(){
-    const snaps = (state.history||[]).slice().reverse();
-    if(!snaps.length){ toast('아직 되돌릴 기록이 없습니다.'); return; }
-    modal(`
-      <h3>이전 상태로 되돌리기</h3>
-      <div class="body">
-        <p style="margin:0 0 10px;font-size:13px;color:var(--muted)">저장할 때마다 자동으로 남긴 기록입니다. 최근 10개까지 보관합니다.</p>
-        ${snaps.map((s,i)=>{
-          const n = s.cats.reduce((a,c)=>a+c.tasks.length,0);
-          const done = s.cats.reduce((a,c)=>a+c.tasks.filter(t=>t.status==='done').length,0);
-          return `<div class="snap">
-            <time>${new Date(s.at).toLocaleString('ko-KR')}</time>
-            <span style="color:var(--muted);font-size:12px">${s.cats.length}단계 · ${done}/${n} 완료</span>
-            <button class="btn" data-snap="${snaps.length-1-i}">이 상태로</button>
-          </div>`;
-        }).join('')}
+function rowHtml(cat,t){
+  const dd = daysUntil(t.due);
+  let due='—', cls='';
+  if(t.due){
+    due = t.due.slice(5).replace('-','/');
+    if(dd!==null && t.status!=='done'){
+      if(dd<0){ due += ` (${Math.abs(dd)}일 지남)`; cls='late'; }
+      else if(dd<=3){ due += ` (D-${dd})`; cls='late'; }
+    }
+  }
+  const st = isAdmin()
+    ? `<button class="st ${t.status}" data-act="cycle" data-cat="${cat.id}" data-task="${t.id}" title="클릭하면 상태가 바뀝니다">${S[t.status]}</button>`
+    : `<span class="st ${t.status}">${S[t.status]}</span>`;
+  return `<div class="row ${t.status==='done'?'done':''}">
+    ${st}
+    <div class="r-main"><div class="r-title">${esc(t.title)}</div>${t.memo?`<div class="r-memo">${esc(t.memo)}</div>`:''}</div>
+    <div class="r-due ${cls}">${due}</div>
+    <div class="r-act">${isAdmin()?`
+      <button class="ibtn" data-act="editTask" data-cat="${cat.id}" data-task="${t.id}" title="수정">✎</button>
+      <button class="ibtn del" data-act="delTask" data-cat="${cat.id}" data-task="${t.id}" title="삭제">×</button>`:''}</div>
+  </div>`;
+}
+
+function bind(){
+  document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{ filter=b.dataset.filter; render(); });
+  const q = document.getElementById('q');
+  if(q) q.oninput = ()=>{ const p=q.selectionStart; query=q.value; render(); const n=document.getElementById('q'); if(n){n.focus(); n.setSelectionRange(p,p);} };
+  document.querySelectorAll('[data-act]').forEach(el=>{ el.onclick = ()=>handle(el.dataset); });
+}
+
+const findCat = id => board.cats.find(c=>c.id===id);
+const findTask = (c,t) => { const k=findCat(c); return k?k.tasks.find(x=>x.id===t):null; };
+
+async function handle(d){
+  const a = d.act;
+  if(a==='pull') return reload();
+  if(a==='csv') return exportCsv();
+  if(a==='backup') return exportBackup();
+  if(a==='settings') return settingsDialog();
+  if(a==='history') return historyDialog();
+  if(a==='signin') return signinDialog();
+  if(a==='signout'){
+    if(dirty && !confirm('저장하지 않은 변경이 있습니다. 그래도 나가시겠습니까? (초안은 이 브라우저에 남습니다)')) return;
+    token=''; LS.del(K_TOKEN); render(); toast('열람 모드로 전환했습니다.'); return;
+  }
+  if(!isAdmin()) return;
+  if(a==='save') return saveNow();
+  if(a==='restore') return importBackup();
+  if(a==='createFile'){ const ok=await push('현황판 최초 생성'); if(ok){ remoteMissing=false; render(); toast('data.json 을 만들었습니다.'); } return; }
+  if(a==='cycle'){
+    const t=findTask(d.cat,d.task); if(!t) return;
+    const order=['wait','doing','done','issue'];
+    t.status = order[(order.indexOf(t.status)+1)%order.length];
+    render(); touch(); return;
+  }
+  if(a==='editTask') return taskDialog(d.cat,d.task);
+  if(a==='addTask')  return taskDialog(d.cat,null);
+  if(a==='delTask'){
+    const k=findCat(d.cat), t=findTask(d.cat,d.task); if(!k||!t) return;
+    confirmDialog('항목을 삭제할까요?', t.title, '삭제', ()=>{ k.tasks=k.tasks.filter(x=>x.id!==d.task); render(); touch(); });
+    return;
+  }
+  if(a==='addCat') return catDialog(null);
+  if(a==='editCat') return catDialog(d.cat);
+  if(a==='delCat'){
+    const k=findCat(d.cat); if(!k) return;
+    confirmDialog('단계를 삭제할까요?', `‘${k.name}’ 단계와 하위 항목 ${k.tasks.length}개가 함께 사라집니다. 변경 기록에서 되돌릴 수 있습니다.`, '삭제', ()=>{
+      board.cats=board.cats.filter(x=>x.id!==d.cat); render(); touch();
+    });
+    return;
+  }
+  if(a==='moveCat'){
+    const i=board.cats.findIndex(c=>c.id===d.cat), j=i+Number(d.dir);
+    if(i<0||j<0||j>=board.cats.length) return;
+    const [m]=board.cats.splice(i,1); board.cats.splice(j,0,m);
+    render(); touch(); return;
+  }
+  if(a==='editEvent') return eventDialog();
+}
+
+async function reload(){
+  if(dirty && !confirm('저장하지 않은 변경이 있습니다. 최신 내용을 불러오면 지금 변경이 사라집니다. 계속할까요?')) return;
+  const o = await pull();
+  if(o){ board=o; dirty=false; LS.del(K_DRAFT); render(); toast('최신 내용을 불러왔습니다.'); }
+  else render();
+}
+
+/* ── 모달 공통 ────────────────────────────── */
+function modal(html, setup){
+  closeModal();
+  const ov = document.createElement('div');
+  ov.className='overlay';
+  ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('mousedown', e=>{ if(e.target===ov) closeModal(); });
+  document.addEventListener('keydown', onEsc);
+  if(setup) setup(ov);
+  const f = ov.querySelector('input,textarea,select'); if(f) f.focus();
+  return ov;
+}
+function onEsc(e){ if(e.key==='Escape') closeModal(); }
+function closeModal(){ document.querySelectorAll('.overlay').forEach(o=>o.remove()); document.removeEventListener('keydown', onEsc); }
+function toast(msg){
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  document.body.appendChild(el); setTimeout(()=>el.remove(),3200);
+}
+function confirmDialog(title,desc,label,onOk){
+  modal(`<h3>${esc(title)}</h3><div class="body"><p style="margin:0;font-size:13.5px;color:var(--muted)">${esc(desc)}</p></div>
+    <div class="acts"><button class="btn ghost" data-x="c">취소</button><button class="btn danger" data-x="o">${esc(label)}</button></div>`,
+    ov=>{ ov.querySelector('[data-x="c"]').onclick=closeModal; ov.querySelector('[data-x="o"]').onclick=()=>{ closeModal(); onOk(); }; });
+}
+
+/* ── 로그인 ───────────────────────────────── */
+function signinDialog(){
+  modal(`
+    <h3>관리자 로그인</h3>
+    <div class="body">
+      <div class="fld">
+        <label>GitHub 개인 액세스 토큰</label>
+        <input id="tk" type="password" autocomplete="off" placeholder="github_pat_...">
+        <div class="hint">
+          GitHub → Settings → Developer settings → <b>Personal access tokens (Fine-grained)</b> → Generate new token<br>
+          · Repository access: <b>${esc(cfg.owner)}/${esc(cfg.repo)}</b> 하나만 선택<br>
+          · Permissions → Repository permissions → <b>Contents: Read and write</b><br>
+          토큰은 이 브라우저에만 저장되며 저장소에는 절대 올라가지 않습니다. 공용 PC에서는 사용 후 ‘나가기’를 눌러 주세요.
+        </div>
       </div>
-      <div class="acts"><button class="btn ghost" data-x="c">닫기</button></div>`, ov=>{
-      ov.querySelector('[data-x="c"]').onclick = close;
-      ov.querySelectorAll('[data-snap]').forEach(b=>b.onclick = async ()=>{
-        const s = state.history[Number(b.dataset.snap)];
-        if(!s) return;
-        close();
-        state.event = JSON.parse(JSON.stringify(s.event));
-        state.cats  = JSON.parse(JSON.stringify(s.cats));
-        render(); await commit();
-        toast('되돌렸습니다.');
-      });
-    });
-  }
-
-  async function findDataDialog(){
-    const ov = modal(`<h3>저장된 데이터 찾기</h3><div class="body"><p style="font-size:13px;color:var(--muted);margin:0">저장소를 살펴보는 중…</p></div>
-      <div class="acts"><button class="btn ghost" data-x="c">닫기</button></div>`, o=>{ o.querySelector('[data-x="c"]').onclick = close; });
-
-    const found = [];
-    const m = await readMirror();
-    if(isBoard(m)) found.push({label:'이 브라우저에 남아 있던 사본', data:m, at:m.updatedAt});
-    for(const shared of [true,false]){
-      for(const k of await listKeys(shared)){
-        if(k === KEY || k === MIRROR || k === SESSION_KEY || k === PROBE) continue;
-        try{
-          const r = await window.storage.get(k, shared);
-          const p = JSON.parse(r.value);
-          const b = isBoard(p) ? p : (isBoard(p && p.board) ? p.board : null);
-          if(b) found.push({label:k, data:b, at:b.updatedAt});
-        }catch(e){}
-      }
-    }
-    const body = ov.querySelector('.body');
-    if(!found.length){
-      body.innerHTML = `<p style="font-size:13.5px;margin:0 0 6px">되살릴 수 있는 데이터가 없습니다.</p>
-        <p style="font-size:12.5px;color:var(--muted);margin:0">이전 화면의 저장 공간에는 여기서 접근할 수 없습니다. 백업 파일(.json)이 있다면 ‘백업 파일 불러오기’로 되살릴 수 있습니다.</p>`;
-      return;
-    }
-    body.innerHTML = found.map((f,i)=>{
-      const n = f.data.cats.reduce((a,c)=>a+c.tasks.length,0);
-      return `<div class="snap">
-        <time>${f.at?new Date(f.at).toLocaleString('ko-KR'):'시각 미상'}</time>
-        <span style="color:var(--muted);font-size:12px">${esc(f.data.event.name||'제목 없음')} · ${n}개 항목</span>
-        <button class="btn" data-found="${i}">되살리기</button>
-      </div>`;
-    }).join('');
-    body.querySelectorAll('[data-found]').forEach(b=>b.onclick = async ()=>{
-      const f = found[Number(b.dataset.found)];
-      close();
-      state.event = f.data.event; state.cats = f.data.cats;
-      if(f.data.admin && f.data.admin.hash && !state.admin.hash) state.admin = f.data.admin;
-      unsaved = false;
-      render(); await commit();
-      toast('데이터를 되살렸습니다. 바로 백업 파일도 내려받아 두세요.');
-    });
-  }
-
-  /* ── CSV ──────────────────────────────────── */
-  function exportCsv(){
-    const rows = [['단계','할 일','상태','마감일','메모']];
-    state.cats.forEach(c=>c.tasks.forEach(t=>rows.push([c.name,t.title,S[t.status],t.due,(t.memo||'').replace(/\n/g,' ')])));
-    const csv = '\uFEFF' + rows.map(r=>r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-    const a = document.createElement('a');
-    a.href = url; a.download = (state.event.name||'행사현황판') + '.csv';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 1000);
-    toast('CSV를 내려받았습니다.');
-  }
-
-  /* ── 시작 ─────────────────────────────────── */
-  (async function start(){
-    storageOk = await probeStorage();
-    let data = await loadShared();
-    if(!data){
-      // 저장된 게 없어도 절대 자동으로 덮어쓰지 않는다.
-      // 이 브라우저에 남은 개인 사본이 있으면 먼저 되살린다.
-      const m = await readMirror();
-      if(isBoard(m)){
-        data = m; data.history = [];
-        unsaved = true;
-        setTimeout(()=>toast('이 브라우저에 남아 있던 사본을 불러왔습니다. 확인 후 저장하세요.'), 600);
-      }else{
-        data = seedState();
-        unsaved = true;
-      }
-    }
-    state = data;
-    if(!state.history) state.history = [];
-    if(!unsaved) mirror(state, true);
-    // 저장이 안 되는 환경이면 자동 백업을 기본으로 켜 둔다
-    if(storageOk === false && !canFS) autoDl = true;
-    const role = await loadRole();
-    if(role === 'admin' && state.admin.hash) isAdmin = true;
-    render();
-
-    // 다른 사람이 바꾼 내용 반영: 창에 다시 들어올 때 + 60초마다
-    let last = state.updatedAt;
-    const sync = async ()=>{
-      if(document.querySelector('.overlay') || busy) return;
-      const fresh = await loadShared();
-      if(fresh && fresh.updatedAt && fresh.updatedAt !== last){
-        last = fresh.updatedAt; state = fresh;
-        if(!state.history) state.history = [];
-        unsaved = false; mirror(state);
-        render();
+      <div id="err"></div>
+    </div>
+    <div class="acts"><button class="btn ghost" data-x="c">취소</button><button class="btn pri" data-x="o">확인</button></div>`, ov=>{
+    const go = async ()=>{
+      const v = ov.querySelector('#tk').value.trim();
+      if(!v){ ov.querySelector('#err').innerHTML='<div class="err">토큰을 입력해 주세요.</div>'; return; }
+      const old = token; token = v;
+      try{
+        const r = await gh(`${apiBase()}`);
+        if(!r.ok){
+          token = old;
+          ov.querySelector('#err').innerHTML = `<div class="err">확인 실패 (${r.status}). 토큰과 저장소 설정을 다시 확인해 주세요.</div>`;
+          return;
+        }
+        const info = await r.json();
+        if(info.permissions && !info.permissions.push){
+          token = old;
+          ov.querySelector('#err').innerHTML = '<div class="err">이 토큰에는 쓰기 권한이 없습니다. Contents: Read and write 로 만들어 주세요.</div>';
+          return;
+        }
+        LS.set(K_TOKEN, v);
+        closeModal();
+        const o = await pull(); if(o) board=o;
+        render(); toast('편집 모드입니다. 수정하면 커밋으로 기록됩니다.');
+      }catch(e){
+        token = old;
+        ov.querySelector('#err').innerHTML='<div class="err">네트워크 오류로 확인하지 못했습니다.</div>';
       }
     };
-    window.addEventListener('focus', sync);
-    setInterval(sync, 60000);
+    ov.querySelector('#tk').onkeydown = e=>{ if(e.key==='Enter') go(); };
+    ov.querySelector('[data-x="c"]').onclick = closeModal;
+    ov.querySelector('[data-x="o"]').onclick = go;
+  });
+}
 
-    // 저장이 끝나지 않았는데 창을 닫으려 하면 경고
-    window.addEventListener('beforeunload', e=>{
-      if(pendingSave || saving || saveState==='failed' || storageOk===false){
-        e.preventDefault(); e.returnValue = '';
+/* ── 설정 ─────────────────────────────────── */
+function settingsDialog(){
+  modal(`
+    <h3>저장소 설정</h3>
+    <div class="body">
+      <div style="display:flex;gap:10px">
+        <div class="fld" style="flex:1"><label>소유자</label><input id="c-o" value="${esc(cfg.owner)}" placeholder="사용자명 또는 조직명"></div>
+        <div class="fld" style="flex:1"><label>저장소</label><input id="c-r" value="${esc(cfg.repo)}"></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div class="fld" style="flex:1"><label>브랜치</label><input id="c-b" value="${esc(cfg.branch)}"></div>
+        <div class="fld" style="flex:1"><label>데이터 파일</label><input id="c-p" value="${esc(cfg.path)}"></div>
+      </div>
+      <div class="hint">주소에서 자동으로 알아내지만, 다르면 여기서 바로잡을 수 있습니다. 이 설정은 이 브라우저에만 저장됩니다.</div>
+    </div>
+    <div class="acts"><button class="btn ghost" data-x="c">취소</button><button class="btn pri" data-x="o">저장하고 다시 불러오기</button></div>`, ov=>{
+    ov.querySelector('[data-x="c"]').onclick = closeModal;
+    ov.querySelector('[data-x="o"]').onclick = async ()=>{
+      cfg = {
+        owner: ov.querySelector('#c-o').value.trim(),
+        repo:  ov.querySelector('#c-r').value.trim(),
+        branch:ov.querySelector('#c-b').value.trim() || 'main',
+        path:  ov.querySelector('#c-p').value.trim() || 'data.json'
+      };
+      LS.set(K_CFG, JSON.stringify(cfg));
+      closeModal();
+      const o = await pull(); if(o){ board=o; dirty=false; }
+      render(); toast('설정을 적용했습니다.');
+    };
+  });
+}
+
+/* ── 변경 기록 (깃 커밋) ──────────────────── */
+async function historyDialog(){
+  const ov = modal(`<h3>변경 기록</h3><div class="body"><p style="font-size:13px;color:var(--muted);margin:0">커밋을 불러오는 중…</p></div>
+    <div class="acts"><button class="btn ghost" data-x="c">닫기</button></div>`, o=>{ o.querySelector('[data-x="c"]').onclick=closeModal; });
+  let list=[];
+  try{
+    const r = await gh(`${apiBase()}/commits?path=${encodeURIComponent(cfg.path)}&sha=${encodeURIComponent(cfg.branch)}&per_page=30`);
+    if(!r.ok) throw new Error(r.status);
+    list = await r.json();
+  }catch(e){
+    ov.querySelector('.body').innerHTML = '<p style="font-size:13px;margin:0">기록을 불러오지 못했습니다. 저장소 설정을 확인해 주세요.</p>';
+    return;
+  }
+  if(!list.length){ ov.querySelector('.body').innerHTML='<p style="font-size:13px;margin:0">아직 기록이 없습니다.</p>'; return; }
+  ov.querySelector('.body').innerHTML =
+    `<p style="margin:0 0 10px;font-size:13px;color:var(--muted)">저장할 때마다 남은 기록입니다. 어느 시점으로든 되돌릴 수 있습니다.</p>` +
+    list.map((c,i)=>`<div class="snap">
+      <time>${new Date(c.commit.author.date).toLocaleString('ko-KR')}</time>
+      <span class="msg">${esc((c.commit.message||'').split('\n')[0])}</span>
+      ${isAdmin()?`<button class="btn" data-rev="${esc(c.sha)}">이 시점으로</button>`:''}
+    </div>`).join('');
+  ov.querySelectorAll('[data-rev]').forEach(b=>b.onclick = async ()=>{
+    const ref = b.dataset.rev;
+    try{
+      const r = await gh(`${apiBase()}/contents/${encodeURIComponent(cfg.path)}?ref=${ref}`);
+      if(!r.ok) throw new Error(r.status);
+      const j = await r.json();
+      const o = JSON.parse(b64decode(j.content));
+      if(!validBoard(o)) throw new Error('형식 오류');
+      closeModal();
+      const n = o.cats.reduce((s,k)=>s+k.tasks.length,0);
+      confirmDialog('이 시점으로 되돌릴까요?', `${o.cats.length}단계 ${n}개 항목으로 되돌립니다. 되돌리는 것도 새 기록으로 남으므로 다시 앞으로 갈 수 있습니다.`, '되돌리기', async ()=>{
+        board = o;
+        const ok = await push(`${ref.slice(0,7)} 시점으로 되돌림`);
+        if(ok) toast('되돌렸습니다.');
+      });
+    }catch(e){ toast('그 시점의 내용을 불러오지 못했습니다.'); }
+  });
+}
+
+/* ── 충돌 ─────────────────────────────────── */
+function conflictDialog(){
+  modal(`<h3>다른 사람이 먼저 저장했습니다</h3>
+    <div class="body"><p style="margin:0;font-size:13.5px;color:var(--muted)">
+      제가 불러온 뒤로 저장소 내용이 바뀌었습니다. 어떻게 할지 골라 주세요.
+      어느 쪽을 고르든 상대의 내용은 변경 기록에 남아 있어 되살릴 수 있습니다.</p></div>
+    <div class="acts">
+      <button class="btn ghost" data-x="c">취소</button>
+      <button class="btn" data-x="theirs">최신 내용 불러오기 (내 변경 버림)</button>
+      <button class="btn pri" data-x="mine">내 내용으로 덮어쓰기</button>
+    </div>`, ov=>{
+    ov.querySelector('[data-x="c"]').onclick = closeModal;
+    ov.querySelector('[data-x="theirs"]').onclick = async ()=>{ closeModal(); dirty=false; LS.del(K_DRAFT); const o=await pull(); if(o) board=o; render(); toast('최신 내용을 불러왔습니다.'); };
+    ov.querySelector('[data-x="mine"]').onclick = async ()=>{
+      closeModal();
+      const mine = board;
+      const o = await pull();          // 최신 sha 확보
+      board = mine;
+      const ok = await push('내 내용으로 덮어씀');
+      if(ok) toast('덮어썼습니다.');
+    };
+  });
+}
+
+/* ── 편집 모달 ────────────────────────────── */
+function taskDialog(catId, taskId){
+  const cat = findCat(catId); if(!cat) return;
+  const t = taskId ? findTask(catId,taskId) : {title:'',due:'',status:'wait',memo:''};
+  modal(`<h3>${taskId?'항목 수정':'항목 추가'}</h3>
+    <div class="body">
+      <div class="fld"><label>할 일</label><input id="f-title" value="${esc(t.title)}" placeholder="예: 대관 계약 및 사용 시간 확정"></div>
+      <div class="fld"><label>상태</label><div class="segs">${STATUSES.map(s=>`<button class="st ${s.id}" data-st="${s.id}" aria-pressed="${t.status===s.id}">${s.label}</button>`).join('')}</div></div>
+      <div class="fld"><label>마감일</label><input id="f-due" type="date" value="${esc(t.due)}"></div>
+      <div class="fld"><label>메모</label><textarea id="f-memo" placeholder="진행 상황, 남은 확인 사항">${esc(t.memo)}</textarea></div>
+      <div id="err"></div>
+    </div>
+    <div class="acts"><button class="btn ghost" data-x="c">취소</button><button class="btn pri" data-x="o">확인</button></div>`, ov=>{
+    let st = t.status;
+    ov.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{ st=b.dataset.st; ov.querySelectorAll('[data-st]').forEach(x=>x.setAttribute('aria-pressed', x.dataset.st===st)); });
+    ov.querySelector('[data-x="c"]').onclick = closeModal;
+    ov.querySelector('[data-x="o"]').onclick = ()=>{
+      const title = ov.querySelector('#f-title').value.trim();
+      if(!title){ ov.querySelector('#err').innerHTML='<div class="err">할 일을 입력해 주세요.</div>'; return; }
+      const data = {title, status:st, due:ov.querySelector('#f-due').value, memo:ov.querySelector('#f-memo').value.trim()};
+      if(taskId) Object.assign(findTask(catId,taskId), data);
+      else cat.tasks.push(Object.assign({id:uid()}, data));
+      closeModal(); render(); touch();
+    };
+  });
+}
+
+function catDialog(catId){
+  const cat = catId ? findCat(catId) : null;
+  modal(`<h3>${cat?'단계 이름 수정':'단계 추가'}</h3>
+    <div class="body">
+      <div class="fld"><label>단계 이름</label><input id="f-cat" value="${cat?esc(cat.name):''}" placeholder="예: 협찬·후원"></div>
+      ${cat?'':`<div class="fld"><label>넣을 위치</label><select id="f-pos">
+        <option value="0">맨 위</option>
+        ${board.cats.map((c,i)=>`<option value="${i+1}" ${i===board.cats.length-1?'selected':''}>‘${esc(c.name)}’ 다음</option>`).join('')}
+      </select><div class="hint">추가한 뒤에도 ↑ ↓ 로 순서를 바꿀 수 있습니다.</div></div>`}
+      <div id="err"></div>
+    </div>
+    <div class="acts"><button class="btn ghost" data-x="c">취소</button><button class="btn pri" data-x="o">확인</button></div>`, ov=>{
+    const go = ()=>{
+      const v = ov.querySelector('#f-cat').value.trim();
+      if(!v){ ov.querySelector('#err').innerHTML='<div class="err">단계 이름을 입력해 주세요.</div>'; return; }
+      if(cat) cat.name = v;
+      else {
+        const p = ov.querySelector('#f-pos');
+        board.cats.splice(p?Number(p.value):board.cats.length, 0, {id:uid(), name:v, tasks:[]});
       }
-    });
-    // 저장에 실패한 상태면 계속 다시 시도
-    setInterval(()=>{ if(saveState==='failed' && !saving){ pendingSave = true; saveLoop(); } }, 15000);
-    // 저장 불가 환경이면 백업을 잊지 않도록 주기적으로 알림
-    if(storageOk === false) setInterval(()=>{ if(sinceBackup>0) toast('아직 백업하지 않은 변경이 있습니다. 백업 내려받기를 눌러 주세요.'); }, 120000);
-  })();
+      closeModal(); render(); touch();
+    };
+    ov.querySelector('#f-cat').onkeydown = e=>{ if(e.key==='Enter') go(); };
+    ov.querySelector('[data-x="c"]').onclick = closeModal;
+    ov.querySelector('[data-x="o"]').onclick = go;
+  });
+}
+
+function eventDialog(){
+  const e = board.event;
+  modal(`<h3>행사 정보</h3>
+    <div class="body">
+      <div class="fld"><label>행사명</label><input id="e-name" value="${esc(e.name)}"></div>
+      <div style="display:flex;gap:10px">
+        <div class="fld" style="flex:1"><label>행사일</label><input id="e-date" type="date" value="${esc(e.date)}"></div>
+        <div class="fld" style="flex:1"><label>주관</label><input id="e-org" value="${esc(e.org||'')}"></div>
+      </div>
+      <div class="fld"><label>장소</label><input id="e-place" value="${esc(e.place||'')}"></div>
+    </div>
+    <div class="acts">
+      <button class="btn danger" data-x="reset" style="margin-right:auto">기본 체크리스트로 초기화</button>
+      <button class="btn ghost" data-x="c">취소</button><button class="btn pri" data-x="o">확인</button>
+    </div>`, ov=>{
+    ov.querySelector('[data-x="c"]').onclick = closeModal;
+    ov.querySelector('[data-x="reset"]').onclick = ()=>{
+      confirmDialog('초기화할까요?','모든 항목이 기본 체크리스트로 돌아갑니다. 변경 기록에서 되돌릴 수 있습니다.','초기화',()=>{
+        const s = seedBoard(); board.event = s.event; board.cats = s.cats; render(); touch();
+      });
+    };
+    ov.querySelector('[data-x="o"]').onclick = ()=>{
+      e.name = ov.querySelector('#e-name').value.trim() || '행사 진행 현황판';
+      e.date = ov.querySelector('#e-date').value;
+      e.org = ov.querySelector('#e-org').value.trim();
+      e.place = ov.querySelector('#e-place').value.trim();
+      closeModal(); render(); touch();
+    };
+  });
+}
+
+/* ── 백업 파일 ────────────────────────────── */
+function download(name, text, type){
+  const url = URL.createObjectURL(new Blob([text],{type}));
+  const a = document.createElement('a'); a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function stamp(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; }
+function exportBackup(){
+  download(`${board.event.name||'행사현황판'}-${stamp()}.json`, JSON.stringify(board,null,2), 'application/json');
+  toast('백업 파일을 내려받았습니다.');
+}
+function importBackup(){
+  const input = document.createElement('input');
+  input.type='file'; input.accept='application/json,.json';
+  input.onchange = ()=>{
+    const f = input.files && input.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ()=>{
+      let o=null;
+      try{ const p=JSON.parse(r.result); o = validBoard(p)?p:(validBoard(p.board)?p.board:null); }catch(e){}
+      if(!o){ toast('현황판 파일이 아닙니다.'); return; }
+      const n = o.cats.reduce((s,k)=>s+k.tasks.length,0);
+      confirmDialog('백업을 불러올까요?', `${o.cats.length}단계 ${n}개 항목으로 지금 내용을 덮어씁니다.`, '불러오기', ()=>{
+        board.event=o.event; board.cats=o.cats; render(); touch(); toast('불러왔습니다. ‘지금 저장’을 눌러 저장소에 반영하세요.');
+      });
+    };
+    r.readAsText(f);
+  };
+  input.click();
+}
+function exportCsv(){
+  const rows=[['단계','할 일','상태','마감일','메모']];
+  board.cats.forEach(c=>c.tasks.forEach(t=>rows.push([c.name,t.title,S[t.status],t.due,(t.memo||'').replace(/\n/g,' ')])));
+  const csv='\uFEFF'+rows.map(r=>r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  download(`${board.event.name||'행사현황판'}-${stamp()}.csv`, csv, 'text/csv;charset=utf-8');
+  toast('CSV를 내려받았습니다.');
+}
+
+/* ── 시작 ─────────────────────────────────── */
+(async function start(){
+  const remote = await pull();
+  board = remote || seedBoard();
+
+  // 저장하지 못한 초안이 남아 있으면 이어서 작업할지 묻는다
+  const draftRaw = LS.get(K_DRAFT);
+  if(draftRaw){
+    try{
+      const d = JSON.parse(draftRaw);
+      if(validBoard(d.board) && d.cfg && d.cfg.owner===cfg.owner && d.cfg.repo===cfg.repo){
+        render();
+        confirmDialog('저장하지 않은 작업이 있습니다',
+          `${new Date(d.at).toLocaleString('ko-KR')} 에 이 브라우저에서 편집하다 저장하지 못한 내용이 있습니다. 이어서 작업할까요?`,
+          '이어서 작업하기', ()=>{ board=d.board; dirty=true; render(); toast('이어서 작업합니다. ‘지금 저장’을 눌러 저장소에 반영하세요.'); });
+      }else{ LS.del(K_DRAFT); }
+    }catch(e){ LS.del(K_DRAFT); }
+  }
+  render();
+
+  // 다른 사람의 변경 반영 (편집 중이 아닐 때만)
+  setInterval(async ()=>{
+    if(dirty || saving || document.querySelector('.overlay')) return;
+    const o = await pull();
+    if(o && JSON.stringify(o)!==JSON.stringify(board)){ board=o; render(); }
+  }, 60000);
+
+  window.addEventListener('beforeunload', e=>{ if(dirty){ e.preventDefault(); e.returnValue=''; } });
+})();
 })();
 </script>
+</body>
+</html>

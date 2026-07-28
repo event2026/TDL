@@ -1,0 +1,380 @@
+{
+  "event": {
+    "name": "행사 진행 현황판",
+    "date": "",
+    "place": "",
+    "org": ""
+  },
+  "cats": [
+    {
+      "id": "d5x4rmxgf",
+      "name": "기획·승인",
+      "tasks": [
+        {
+          "id": "orhplf8o6",
+          "title": "행사 목적과 컨셉 확정",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "v9u6retcm",
+          "title": "대상과 목표 참석 인원 정의",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "pbycbjmqk",
+          "title": "행사 일시 확정",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "dw8bdtt1q",
+          "title": "개최 승인 및 내부 보고",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "cqtnnz9nm",
+          "title": "전체 마스터 스케줄 수립",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        }
+      ]
+    },
+    {
+      "id": "z32ynboul",
+      "name": "예산·계약",
+      "tasks": [
+        {
+          "id": "7dc96dshm",
+          "title": "총예산안 편성 및 승인",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "790oli13a",
+          "title": "업체 견적 비교 및 선정",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "z0k0peb39",
+          "title": "계약서 작성·날인",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "iobfpjbbk",
+          "title": "계약금·잔금 지급 일정 확정",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "3hcgxu7sv",
+          "title": "정산 양식 및 증빙 기준 준비",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        }
+      ]
+    },
+    {
+      "id": "odtal51m9",
+      "name": "장소·시설",
+      "tasks": [
+        {
+          "id": "npw9wgbxx",
+          "title": "장소 후보 답사",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "hmeye8iof",
+          "title": "대관 계약 및 사용 시간 확정",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "lgb72k2sf",
+          "title": "좌석·부스 배치도 작성",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "k92e7h4hk",
+          "title": "전기·인터넷·주차 확인",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "kfubhq9yq",
+          "title": "소방·안전 점검 및 인허가",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        }
+      ]
+    },
+    {
+      "id": "ppfk306q4",
+      "name": "프로그램·출연",
+      "tasks": [
+        {
+          "id": "itgqpmw13",
+          "title": "세부 진행표(런다운) 확정",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "ix6p40ojc",
+          "title": "연사·출연자 섭외 및 계약",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "2l8lceqdk",
+          "title": "사회자 섭외 및 대본 작성",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "f8kc02yc8",
+          "title": "발표자료 취합 및 검수",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "dih8nxazm",
+          "title": "리허설 일정 확정",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        }
+      ]
+    },
+    {
+      "id": "i5absnlgi",
+      "name": "홍보·모집",
+      "tasks": [
+        {
+          "id": "s9qiah0eg",
+          "title": "포스터·영상 등 홍보물 제작",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "3kw69oel9",
+          "title": "채널별 홍보 일정 수립",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "57x4y14fu",
+          "title": "참가 신청 페이지 오픈",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "h0ofd83sb",
+          "title": "참가자 안내 메일 발송",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "lih03jqxq",
+          "title": "언론·미디어 응대 계획",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        }
+      ]
+    },
+    {
+      "id": "dq9w18mbm",
+      "name": "제작·물품",
+      "tasks": [
+        {
+          "id": "8zf7a5lj1",
+          "title": "현수막·배너·사이니지 제작",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "euhitve0p",
+          "title": "명찰과 안내 표지 제작",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "gjwf4zd2p",
+          "title": "기념품 발주",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "7rpuzxl9a",
+          "title": "프로그램북 인쇄",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "scx4ycrcy",
+          "title": "다과·케이터링 발주",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        }
+      ]
+    },
+    {
+      "id": "hc4rfs44w",
+      "name": "인력·운영",
+      "tasks": [
+        {
+          "id": "9rm9iq4z9",
+          "title": "운영 인력 편성표 작성",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "jujkdvftn",
+          "title": "스태프 역할과 동선 교육",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "y0ufbpa94",
+          "title": "자원봉사·단기 인력 모집",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "x57wgl2os",
+          "title": "무전기 및 비상 연락망 구성",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "130tihj90",
+          "title": "비상 대응 매뉴얼 작성",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        }
+      ]
+    },
+    {
+      "id": "17vjkfpnh",
+      "name": "행사 당일",
+      "tasks": [
+        {
+          "id": "pb9ui5kpl",
+          "title": "현장 셋업 및 음향·영상 점검",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "eo3077dbx",
+          "title": "최종 리허설",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "iexsfz6mj",
+          "title": "등록·안내 데스크 운영",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "1y7thdv9f",
+          "title": "진행표 대비 시간 체크",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "xa3u6a4ub",
+          "title": "사진·영상 기록",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        }
+      ]
+    },
+    {
+      "id": "dysmfpu69",
+      "name": "사후 정리",
+      "tasks": [
+        {
+          "id": "gp3k3uyme",
+          "title": "철수 및 원상복구",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "hcs7y1wmg",
+          "title": "대금 지급 및 정산 완료",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "u87bof2wj",
+          "title": "참가자 만족도 설문",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "fz8mkujfd",
+          "title": "결과 보고서 작성",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        },
+        {
+          "id": "kkz4payqs",
+          "title": "자료 아카이빙 및 감사 인사",
+          "due": "",
+          "status": "wait",
+          "memo": ""
+        }
+      ]
+    }
+  ],
+  "updatedAt": "2026-07-28T05:31:03.440190"
+}
