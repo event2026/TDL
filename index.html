@@ -185,6 +185,19 @@
   }
   .addrow button:hover{border-color:var(--muted);color:var(--text);}
 
+  .notice{
+    background:#FCF3E0;border-bottom:1px solid #F0CE8A;padding:12px 24px;
+    display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px;color:#6B4A05;
+  }
+  .notice b{font-weight:700;}
+  .notice .btn{padding:6px 12px;font-size:12.5px;}
+  .snap{
+    display:flex;align-items:center;gap:10px;padding:10px 0;
+    border-bottom:1px solid var(--line-soft);font-size:13px;
+  }
+  .snap:last-child{border-bottom:none;}
+  .snap time{font-family:var(--mono);font-size:12px;color:var(--muted);flex:1;font-variant-numeric:tabular-nums;}
+
   .empty{padding:44px 20px;text-align:center;color:var(--muted);font-size:14px;}
   .foot{
     max-width:1180px;margin:0 auto;padding:0 24px 40px;
@@ -296,6 +309,7 @@
         id:uid(), name,
         tasks: titles.map(t=>({id:uid(), title:t, due:'', status:'wait', memo:''}))
       })),
+      history: [],
       updatedAt: Date.now()
     };
   }
@@ -329,6 +343,27 @@
     if(!hasStore){ mem[SESSION_KEY] = v; return; }
     try{ await window.storage.set(SESSION_KEY, v, false); }catch(e){}
   }
+  // 공유 저장소가 비어 있을 때를 대비한 개인 사본
+  const MIRROR = 'event-board-mirror';
+  let lastMirror = 0;
+  async function mirror(data, force){
+    if(!hasStore) return;
+    if(!force && Date.now() - lastMirror < 45000) return;
+    lastMirror = Date.now();
+    try{ await window.storage.set(MIRROR, JSON.stringify(stripHistory(data)), false); }catch(e){}
+  }
+  async function readMirror(){
+    if(!hasStore) return null;
+    try{ const r = await window.storage.get(MIRROR, false); return r && r.value ? JSON.parse(r.value) : null; }
+    catch(e){ return null; }
+  }
+  async function listKeys(shared){
+    if(!hasStore) return [];
+    try{ const r = await window.storage.list('', shared); return (r && r.keys) || []; }
+    catch(e){ return []; }
+  }
+  const stripHistory = d => ({event:d.event, admin:d.admin, cats:d.cats, updatedAt:d.updatedAt});
+  const isBoard = o => o && o.cats && Array.isArray(o.cats) && o.event;
 
   async function sha(text){
     try{
@@ -347,6 +382,7 @@
   let filter = 'all';
   let query = '';
   let busy = false;
+  let unsaved = false;   // 공유 저장소에 아직 저장된 적 없는 상태
 
   const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const todayStr = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
@@ -426,13 +462,25 @@
         <input class="search" id="q" type="search" placeholder="항목 검색" value="${esc(query)}" aria-label="검색">
         <span class="spacer"></span>
         <button class="tbtn" data-act="refresh">새로고침</button>
-        <button class="tbtn" data-act="csv">CSV 내려받기</button>
+        <button class="tbtn" data-act="backup">백업 내려받기</button>
+        <button class="tbtn" data-act="csv">CSV</button>
         ${isAdmin
-          ? `<button class="tbtn" data-act="editEvent">행사 정보</button>
+          ? `<button class="tbtn" data-act="restore">백업 불러오기</button>
+             <button class="tbtn" data-act="undo">이전 상태로 되돌리기</button>
+             <button class="tbtn" data-act="editEvent">행사 정보</button>
              <button class="tbtn" data-act="addCat">단계 추가</button>
              <button class="tbtn on" data-act="lock">편집 중 · 잠그기</button>`
           : `<button class="tbtn key" data-act="unlock">관리자 모드</button>`}
       </div>
+
+      ${unsaved ? `<div class="notice">
+        <span><b>저장된 현황판이 없습니다.</b> 지금 보이는 건 기본 체크리스트일 뿐, 아직 아무것도 저장되지 않았습니다.
+        이전에 쓰던 내용이 있다면 백업 파일로 되살릴 수 있습니다.</span>
+        <span class="spacer"></span>
+        <button class="btn" data-act="restore">백업 파일 불러오기</button>
+        <button class="btn" data-act="findData">저장된 데이터 찾기</button>
+        <button class="btn pri" data-act="startNew">새 현황판으로 시작</button>
+      </div>` : ''}
 
       <main class="board">${renderCats()}</main>
 
@@ -440,6 +488,7 @@
         모든 사용자가 같은 현황판을 봅니다. 편집은 관리자 코드를 입력한 사람만 할 수 있고, 나머지는 열람만 가능합니다.
         · 저장된 내용은 이 현황판을 여는 모든 사람에게 공개됩니다. 개인정보나 대외비는 담지 마세요.
         · 관리자 코드는 간단한 편집 잠금 장치이며 보안 인증이 아닙니다.
+        <br><b style="color:var(--text)">중요한 변경 뒤에는 ‘백업 내려받기’를 눌러 .json 파일을 보관하세요.</b> 화면이 새로 만들어지거나 데이터가 비어도 그 파일로 그대로 되살릴 수 있습니다.
         ${state.updatedAt?`<br>마지막 저장 ${new Date(state.updatedAt).toLocaleString('ko-KR')}`:''}
       </div>
     `;
@@ -533,6 +582,10 @@
     const a = d.act;
     if(a==='refresh') return refresh();
     if(a==='csv') return exportCsv();
+    if(a==='backup') return exportBackup();
+    if(a==='restore') return importBackup();
+    if(a==='findData') return findDataDialog();
+    if(a==='startNew'){ unsaved = false; await commit(); render(); toast('새 현황판을 저장했습니다.'); return; }
     if(a==='unlock') return unlockDialog();
     if(a==='lock'){ isAdmin=false; await saveRole(''); render(); toast('열람 모드로 돌아왔습니다.'); return; }
     if(!isAdmin) return;
@@ -569,15 +622,21 @@
       });
       return;
     }
+    if(a==='undo') return undoDialog();
     if(a==='editEvent') return eventDialog();
   }
 
   async function commit(){
     if(busy) return;
     busy = true;
+    // 저장 직전 상태를 스냅샷으로 남겨 되돌릴 수 있게 한다
+    if(!state.history) state.history = [];
+    state.history.push({at:Date.now(), event:JSON.parse(JSON.stringify(state.event)), cats:JSON.parse(JSON.stringify(state.cats))});
+    if(state.history.length > 10) state.history = state.history.slice(-10);
     const ok = await saveShared(state);
     busy = false;
-    if(!ok) toast('저장하지 못했습니다. 새로고침 후 다시 시도하세요.');
+    if(ok){ unsaved = false; mirror(state); }
+    else toast('저장하지 못했습니다. 백업을 내려받아 두세요.');
   }
 
   async function refresh(){
@@ -777,6 +836,130 @@
     });
   }
 
+  /* ── 백업 · 복원 ──────────────────────────── */
+  function download(name, text, type){
+    const url = URL.createObjectURL(new Blob([text],{type:type}));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }
+
+  function stamp(){
+    const d = new Date(), p = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+  }
+
+  function exportBackup(){
+    const payload = JSON.stringify({kind:'event-board', savedAt:new Date().toISOString(), board:stripHistory(state)}, null, 2);
+    download(`${state.event.name||'행사현황판'}-백업-${stamp()}.json`, payload, 'application/json');
+    toast('백업 파일을 내려받았습니다. 이 파일만 있으면 언제든 되살릴 수 있습니다.');
+  }
+
+  function importBackup(){
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'application/json,.json';
+    input.onchange = () => {
+      const f = input.files && input.files[0];
+      if(!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        let board = null;
+        try{
+          const p = JSON.parse(r.result);
+          board = isBoard(p) ? p : (isBoard(p.board) ? p.board : null);
+        }catch(e){}
+        if(!board){ toast('현황판 백업 파일이 아닙니다. 내려받은 .json 파일을 골라 주세요.'); return; }
+        const n = board.cats.reduce((s,c)=>s+c.tasks.length,0);
+        confirmDialog('백업을 불러올까요?', `‘${board.event.name||'제목 없음'}’ · ${board.cats.length}단계 ${n}개 항목으로 지금 화면을 덮어씁니다. 되돌리기에서 현재 상태로 돌아올 수 있습니다.`, '불러오기', async ()=>{
+          const keepHash = state.admin && state.admin.hash;
+          state.event = board.event;
+          state.cats  = board.cats;
+          if(!keepHash && board.admin) state.admin = board.admin;
+          unsaved = false;
+          render(); await commit(); await mirror(state, true);
+          toast('백업을 되살렸습니다.');
+        });
+      };
+      r.readAsText(f);
+    };
+    input.click();
+  }
+
+  function undoDialog(){
+    const snaps = (state.history||[]).slice().reverse();
+    if(!snaps.length){ toast('아직 되돌릴 기록이 없습니다.'); return; }
+    modal(`
+      <h3>이전 상태로 되돌리기</h3>
+      <div class="body">
+        <p style="margin:0 0 10px;font-size:13px;color:var(--muted)">저장할 때마다 자동으로 남긴 기록입니다. 최근 10개까지 보관합니다.</p>
+        ${snaps.map((s,i)=>{
+          const n = s.cats.reduce((a,c)=>a+c.tasks.length,0);
+          const done = s.cats.reduce((a,c)=>a+c.tasks.filter(t=>t.status==='done').length,0);
+          return `<div class="snap">
+            <time>${new Date(s.at).toLocaleString('ko-KR')}</time>
+            <span style="color:var(--muted);font-size:12px">${s.cats.length}단계 · ${done}/${n} 완료</span>
+            <button class="btn" data-snap="${snaps.length-1-i}">이 상태로</button>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="acts"><button class="btn ghost" data-x="c">닫기</button></div>`, ov=>{
+      ov.querySelector('[data-x="c"]').onclick = close;
+      ov.querySelectorAll('[data-snap]').forEach(b=>b.onclick = async ()=>{
+        const s = state.history[Number(b.dataset.snap)];
+        if(!s) return;
+        close();
+        state.event = JSON.parse(JSON.stringify(s.event));
+        state.cats  = JSON.parse(JSON.stringify(s.cats));
+        render(); await commit();
+        toast('되돌렸습니다.');
+      });
+    });
+  }
+
+  async function findDataDialog(){
+    const ov = modal(`<h3>저장된 데이터 찾기</h3><div class="body"><p style="font-size:13px;color:var(--muted);margin:0">저장소를 살펴보는 중…</p></div>
+      <div class="acts"><button class="btn ghost" data-x="c">닫기</button></div>`, o=>{ o.querySelector('[data-x="c"]').onclick = close; });
+
+    const found = [];
+    const m = await readMirror();
+    if(isBoard(m)) found.push({label:'이 브라우저에 남아 있던 사본', data:m, at:m.updatedAt});
+    for(const shared of [true,false]){
+      for(const k of await listKeys(shared)){
+        if(k === KEY || k === MIRROR || k === SESSION_KEY) continue;
+        try{
+          const r = await window.storage.get(k, shared);
+          const p = JSON.parse(r.value);
+          const b = isBoard(p) ? p : (isBoard(p && p.board) ? p.board : null);
+          if(b) found.push({label:k, data:b, at:b.updatedAt});
+        }catch(e){}
+      }
+    }
+    const body = ov.querySelector('.body');
+    if(!found.length){
+      body.innerHTML = `<p style="font-size:13.5px;margin:0 0 6px">되살릴 수 있는 데이터가 없습니다.</p>
+        <p style="font-size:12.5px;color:var(--muted);margin:0">이전 화면의 저장 공간에는 여기서 접근할 수 없습니다. 백업 파일(.json)이 있다면 ‘백업 파일 불러오기’로 되살릴 수 있습니다.</p>`;
+      return;
+    }
+    body.innerHTML = found.map((f,i)=>{
+      const n = f.data.cats.reduce((a,c)=>a+c.tasks.length,0);
+      return `<div class="snap">
+        <time>${f.at?new Date(f.at).toLocaleString('ko-KR'):'시각 미상'}</time>
+        <span style="color:var(--muted);font-size:12px">${esc(f.data.event.name||'제목 없음')} · ${n}개 항목</span>
+        <button class="btn" data-found="${i}">되살리기</button>
+      </div>`;
+    }).join('');
+    body.querySelectorAll('[data-found]').forEach(b=>b.onclick = async ()=>{
+      const f = found[Number(b.dataset.found)];
+      close();
+      state.event = f.data.event; state.cats = f.data.cats;
+      if(f.data.admin && f.data.admin.hash && !state.admin.hash) state.admin = f.data.admin;
+      unsaved = false;
+      render(); await commit();
+      toast('데이터를 되살렸습니다. 바로 백업 파일도 내려받아 두세요.');
+    });
+  }
+
   /* ── CSV ──────────────────────────────────── */
   function exportCsv(){
     const rows = [['단계','할 일','상태','마감일','메모']];
@@ -794,10 +977,21 @@
   (async function start(){
     let data = await loadShared();
     if(!data){
-      data = seedState();
-      await saveShared(data);
+      // 저장된 게 없어도 절대 자동으로 덮어쓰지 않는다.
+      // 이 브라우저에 남은 개인 사본이 있으면 먼저 되살린다.
+      const m = await readMirror();
+      if(isBoard(m)){
+        data = m; data.history = [];
+        unsaved = true;
+        setTimeout(()=>toast('이 브라우저에 남아 있던 사본을 불러왔습니다. 확인 후 저장하세요.'), 600);
+      }else{
+        data = seedState();
+        unsaved = true;
+      }
     }
     state = data;
+    if(!state.history) state.history = [];
+    if(!unsaved) mirror(state, true);
     const role = await loadRole();
     if(role === 'admin' && state.admin.hash) isAdmin = true;
     render();
@@ -808,7 +1002,10 @@
       if(document.querySelector('.overlay') || busy) return;
       const fresh = await loadShared();
       if(fresh && fresh.updatedAt && fresh.updatedAt !== last){
-        last = fresh.updatedAt; state = fresh; render();
+        last = fresh.updatedAt; state = fresh;
+        if(!state.history) state.history = [];
+        unsaved = false; mirror(state);
+        render();
       }
     };
     window.addEventListener('focus', sync);
