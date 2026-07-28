@@ -813,22 +813,79 @@ function exportBackup(){
   download(`${board.event.name||'행사현황판'}-${stamp()}.json`, JSON.stringify(board,null,2), 'application/json');
   toast('백업 파일을 내려받았습니다.');
 }
+function parseCsv(text){
+  // 따옴표로 감싼 셀(줄바꿈·쉼표 포함)을 처리하는 CSV 파서
+  text = text.replace(/^\uFEFF/,'');
+  const rows=[]; let row=[], cell='', q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){
+      if(ch==='"'){ if(text[i+1]==='"'){ cell+='"'; i++; } else q=false; }
+      else cell+=ch;
+    }else{
+      if(ch==='"') q=true;
+      else if(ch===','){ row.push(cell); cell=''; }
+      else if(ch==='\n'||ch==='\r'){
+        if(ch==='\r'&&text[i+1]==='\n') i++;
+        row.push(cell); cell='';
+        if(row.some(c=>c.trim()!=='')) rows.push(row);
+        row=[];
+      }
+      else cell+=ch;
+    }
+  }
+  row.push(cell);
+  if(row.some(c=>c.trim()!=='')) rows.push(row);
+  return rows;
+}
+
+function boardFromCsv(text){
+  const rows = parseCsv(text);
+  if(rows.length < 2) return null;
+  const head = rows[0].map(h=>h.trim());
+  const col = name => head.indexOf(name);
+  const iCat=col('단계'), iTitle=col('할 일'), iSt=col('상태'), iDue=col('마감일'), iMemo=col('메모');
+  if(iCat<0 || iTitle<0) return null;  // 이 현황판에서 내보낸 CSV가 아님
+  const label2id = Object.fromEntries(STATUSES.map(s=>[s.label,s.id]));
+  const cats=[]; const byName={};
+  for(let r=1;r<rows.length;r++){
+    const row=rows[r];
+    const catName=(row[iCat]||'').trim(), title=(row[iTitle]||'').trim();
+    if(!catName || !title) continue;
+    if(!byName[catName]){ byName[catName]={id:uid(),name:catName,tasks:[]}; cats.push(byName[catName]); }
+    let due=(iDue>=0?(row[iDue]||''):'').trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(due)) due='';
+    byName[catName].tasks.push({
+      id:uid(), title,
+      status: label2id[(iSt>=0?(row[iSt]||''):'').trim()] || 'wait',
+      due,
+      memo:(iMemo>=0?(row[iMemo]||''):'').trim()
+    });
+  }
+  if(!cats.length) return null;
+  return {event: JSON.parse(JSON.stringify(board.event)), cats, updatedAt:new Date().toISOString()};
+}
+
 function importBackup(){
   const input = document.createElement('input');
-  input.type='file'; input.accept='application/json,.json';
+  input.type='file'; input.accept='.json,.csv,application/json,text/csv';
   input.onchange = ()=>{
     const f = input.files && input.files[0]; if(!f) return;
     const r = new FileReader();
     r.onload = ()=>{
-      let o=null;
-      try{ const p=JSON.parse(r.result); o = validBoard(p)?p:(validBoard(p.board)?p.board:null); }catch(e){}
-      if(!o){ toast('현황판 파일이 아닙니다.'); return; }
+      let o=null, src='';
+      const text = r.result;
+      try{ const p=JSON.parse(text); o = validBoard(p)?p:(validBoard(p.board)?p.board:null); src='json'; }catch(e){}
+      if(!o){ o = boardFromCsv(text); src='csv'; }
+      if(!o){ toast('이 현황판에서 내려받은 백업(.json) 또는 CSV 파일을 골라 주세요.'); return; }
       const n = o.cats.reduce((s,k)=>s+k.tasks.length,0);
-      confirmDialog('백업을 불러올까요?', `${o.cats.length}단계 ${n}개 항목으로 지금 내용을 덮어씁니다.`, '불러오기', ()=>{
-        board.event=o.event; board.cats=o.cats; render(); touch(); toast('불러왔습니다. ‘지금 저장’을 눌러 저장소에 반영하세요.');
+      const extra = src==='csv' ? ' (CSV에는 행사명·날짜가 없어 그 부분은 지금 값을 유지합니다.)' : '';
+      confirmDialog('백업을 불러올까요?', `${o.cats.length}단계 ${n}개 항목으로 지금 내용을 덮어씁니다.${extra}`, '불러오기', ()=>{
+        if(src==='json') board.event=o.event;
+        board.cats=o.cats; render(); touch(); toast('불러왔습니다. ‘지금 저장(커밋)’을 눌러 저장소에 반영하세요.');
       });
     };
-    r.readAsText(f);
+    r.readAsText(f, 'utf-8');
   };
   input.click();
 }
