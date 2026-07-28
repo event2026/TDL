@@ -145,7 +145,7 @@
 
   .rows{background:var(--card);border:1px solid var(--line);border-radius:9px;overflow:hidden;}
   .row{
-    display:grid;grid-template-columns:88px 1fr 116px 104px auto;
+    display:grid;grid-template-columns:88px 1fr 118px auto;
     gap:12px;align-items:center;padding:11px 14px;
     border-bottom:1px solid var(--line-soft);
   }
@@ -166,8 +166,6 @@
 
   .r-title{font-size:14px;font-weight:500;word-break:keep-all;}
   .r-memo{font-size:12.5px;color:var(--muted);margin-top:3px;white-space:pre-wrap;word-break:break-word;}
-  .r-owner{font-size:13px;color:var(--muted);}
-  .r-owner.set{color:var(--text);font-weight:600;}
   .r-due{font-size:12.5px;font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;}
   .r-due.late{color:var(--issue);font-weight:700;}
   .r-act{display:flex;gap:5px;}
@@ -177,6 +175,8 @@
   }
   .ibtn:hover{border-color:var(--muted);color:var(--text);}
   .ibtn.del:hover{border-color:var(--issue);color:var(--issue);}
+  .ibtn:disabled{opacity:.28;cursor:default;}
+  .ibtn:disabled:hover{border-color:var(--line);color:var(--muted);}
 
   .addrow{padding:9px 14px;background:#FAFBFC;border-top:1px solid var(--line-soft);}
   .addrow button{
@@ -243,10 +243,8 @@
     .row{grid-template-columns:80px 1fr auto;grid-template-areas:"st title act" ". meta act";row-gap:5px;}
     .row .st{grid-area:st;align-self:start;}
     .r-main{grid-area:title;}
-    .r-owner{grid-area:meta;}
-    .r-due{grid-area:meta;justify-self:end;}
+    .r-due{grid-area:meta;font-size:12px;}
     .r-act{grid-area:act;align-self:start;}
-    .r-owner,.r-due{font-size:12px;}
   }
 
   @media print{
@@ -296,7 +294,7 @@
       admin:{ hash:'' },
       cats: SEED.map(([name,titles])=>({
         id:uid(), name,
-        tasks: titles.map(t=>({id:uid(), title:t, owner:'', due:'', status:'wait', memo:''}))
+        tasks: titles.map(t=>({id:uid(), title:t, due:'', status:'wait', memo:''}))
       })),
       updatedAt: Date.now()
     };
@@ -370,7 +368,7 @@
     if(filter!=='all' && t.status!==filter) return false;
     if(query){
       const q = query.toLowerCase();
-      if(!((t.title||'')+' '+(t.owner||'')+' '+(t.memo||'')).toLowerCase().includes(q)) return false;
+      if(!((t.title||'')+' '+(t.memo||'')).toLowerCase().includes(q)) return false;
     }
     return true;
   }
@@ -425,7 +423,7 @@
             return `<button class="chip-f" data-filter="${f}" aria-pressed="${filter===f}">${lb}</button>`;
           }).join('')}
         </div>
-        <input class="search" id="q" type="search" placeholder="항목·담당자 검색" value="${esc(query)}" aria-label="검색">
+        <input class="search" id="q" type="search" placeholder="항목 검색" value="${esc(query)}" aria-label="검색">
         <span class="spacer"></span>
         <button class="tbtn" data-act="refresh">새로고침</button>
         <button class="tbtn" data-act="csv">CSV 내려받기</button>
@@ -466,6 +464,8 @@
             <span class="cat-rule"></span>
             <span class="cat-count ${done===cat.tasks.length&&cat.tasks.length?'full':''}">${done}/${cat.tasks.length}</span>
             ${isAdmin?`<span class="r-act">
+              <button class="ibtn" data-act="moveCat" data-cat="${cat.id}" data-dir="-1" ${i===0?'disabled':''} title="위로 이동" aria-label="단계를 위로 이동">↑</button>
+              <button class="ibtn" data-act="moveCat" data-cat="${cat.id}" data-dir="1" ${i===state.cats.length-1?'disabled':''} title="아래로 이동" aria-label="단계를 아래로 이동">↓</button>
               <button class="ibtn" data-act="editCat" data-cat="${cat.id}" title="단계 이름 수정" aria-label="단계 이름 수정">✎</button>
               <button class="ibtn del" data-act="delCat" data-cat="${cat.id}" title="단계 삭제" aria-label="단계 삭제">×</button>
             </span>`:''}
@@ -502,7 +502,6 @@
           <div class="r-title">${esc(t.title)}</div>
           ${t.memo?`<div class="r-memo">${esc(t.memo)}</div>`:''}
         </div>
-        <div class="r-owner ${t.owner?'set':''}">${t.owner?esc(t.owner):'담당 미정'}</div>
         <div class="r-due ${dueCls}">${due}</div>
         <div class="r-act">
           ${isAdmin?`
@@ -552,6 +551,14 @@
         c.tasks = c.tasks.filter(x=>x.id!==d.task); render(); commit(); toast('삭제했습니다.');
       });
       return;
+    }
+    if(a==='moveCat'){
+      const i = state.cats.findIndex(c=>c.id===d.cat);
+      const j = i + Number(d.dir);
+      if(i<0 || j<0 || j>=state.cats.length) return;
+      const [moved] = state.cats.splice(i,1);
+      state.cats.splice(j,0,moved);
+      render(); return commit();
     }
     if(a==='addCat')  return catDialog(null);
     if(a==='editCat') return catDialog(d.cat);
@@ -654,7 +661,7 @@
 
   function taskDialog(catId, taskId){
     const cat = findCat(catId); if(!cat) return;
-    const t = taskId ? findTask(catId, taskId) : {title:'',owner:'',due:'',status:'wait',memo:''};
+    const t = taskId ? findTask(catId, taskId) : {title:'',due:'',status:'wait',memo:''};
     modal(`
       <h3>${taskId?'항목 수정':'항목 추가'}</h3>
       <div class="body">
@@ -662,11 +669,8 @@
         <div class="fld"><label>상태</label>
           <div class="segs">${STATUSES.map(s=>`<button class="st ${s.id}" data-st="${s.id}" aria-pressed="${t.status===s.id}">${s.label}</button>`).join('')}</div>
         </div>
-        <div style="display:flex;gap:10px">
-          <div class="fld" style="flex:1"><label>담당자</label><input id="f-owner" value="${esc(t.owner)}" placeholder="이름 또는 팀"></div>
-          <div class="fld" style="flex:1"><label>마감일</label><input id="f-due" type="date" value="${esc(t.due)}"></div>
-        </div>
-        <div class="fld"><label>메모</label><textarea id="f-memo" placeholder="진행 상황, 연락처, 남은 확인 사항">${esc(t.memo)}</textarea></div>
+        <div class="fld"><label>마감일</label><input id="f-due" type="date" value="${esc(t.due)}"></div>
+        <div class="fld"><label>메모</label><textarea id="f-memo" placeholder="진행 상황, 남은 확인 사항">${esc(t.memo)}</textarea></div>
         <div id="err"></div>
       </div>
       <div class="acts">
@@ -684,7 +688,6 @@
         if(!title){ ov.querySelector('#err').innerHTML='<div class="err">할 일을 입력해 주세요.</div>'; return; }
         const data = {
           title, status:st,
-          owner: ov.querySelector('#f-owner').value.trim(),
           due:   ov.querySelector('#f-due').value,
           memo:  ov.querySelector('#f-memo').value.trim()
         };
@@ -702,13 +705,24 @@
       <div class="body">
         <div class="fld"><label>단계 이름</label><input id="f-cat" value="${cat?esc(cat.name):''}" placeholder="예: 협찬·후원">
         <div class="hint">단계는 위에서 아래로 진행 순서대로 표시됩니다.</div></div>
+        ${cat?'':`<div class="fld"><label>넣을 위치</label>
+          <select id="f-pos">
+            <option value="0">맨 위</option>
+            ${state.cats.map((c,i)=>`<option value="${i+1}" ${i===state.cats.length-1?'selected':''}>‘${esc(c.name)}’ 다음</option>`).join('')}
+          </select>
+          <div class="hint">추가한 뒤에도 단계 옆 ↑ ↓ 버튼으로 순서를 바꿀 수 있습니다.</div></div>`}
         <div id="err"></div>
       </div>
       <div class="acts"><button class="btn ghost" data-x="c">취소</button><button class="btn pri" data-x="o">저장</button></div>`, ov=>{
       const go = ()=>{
         const v = ov.querySelector('#f-cat').value.trim();
         if(!v){ ov.querySelector('#err').innerHTML='<div class="err">단계 이름을 입력해 주세요.</div>'; return; }
-        if(cat) cat.name = v; else state.cats.push({id:uid(), name:v, tasks:[]});
+        if(cat){ cat.name = v; }
+        else {
+          const posEl = ov.querySelector('#f-pos');
+          const pos = posEl ? Number(posEl.value) : state.cats.length;
+          state.cats.splice(pos, 0, {id:uid(), name:v, tasks:[]});
+        }
         close(); render(); commit(); toast('저장했습니다.');
       };
       ov.querySelector('#f-cat').onkeydown = e=>{ if(e.key==='Enter') go(); };
@@ -765,8 +779,8 @@
 
   /* ── CSV ──────────────────────────────────── */
   function exportCsv(){
-    const rows = [['단계','할 일','상태','담당자','마감일','메모']];
-    state.cats.forEach(c=>c.tasks.forEach(t=>rows.push([c.name,t.title,S[t.status],t.owner,t.due,(t.memo||'').replace(/\n/g,' ')])));
+    const rows = [['단계','할 일','상태','마감일','메모']];
+    state.cats.forEach(c=>c.tasks.forEach(t=>rows.push([c.name,t.title,S[t.status],t.due,(t.memo||'').replace(/\n/g,' ')])));
     const csv = '\uFEFF' + rows.map(r=>r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
     const a = document.createElement('a');
