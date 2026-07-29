@@ -6,8 +6,8 @@
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#f7f7f5">
   <title>프로젝트 진행 현황</title>
-  <meta name="status-board-version" content="6.0.0">
-  <link rel="stylesheet" href="./styles.css?v=6.0.0">
+  <meta name="status-board-version" content="6.0.1">
+  <link rel="stylesheet" href="./styles.css?v=6.0.1">
 </head>
 <body>
   <noscript><div class="fatal-message">이 현황판은 JavaScript가 필요합니다. 브라우저 설정에서 JavaScript를 허용해 주세요.</div></noscript>
@@ -127,8 +127,8 @@
     <div class="dialog-header"><div><h2>권한 관리</h2><p class="dialog-subtitle">처음 로그인한 계정은 비활성 상태로 자동 등록됩니다.</p></div><button class="icon-button" type="button" data-close="permissionDialog" aria-label="닫기">×</button></div>
     <div class="dialog-body">
       <section class="manage-section">
-        <div class="section-heading"><div><h3>사용자 권한</h3><p>열람 또는 상태 편집 권한을 선택한 뒤 저장하세요.</p></div></div>
-        <form id="memberForm" class="member-form"><input id="memberEmail" type="email" placeholder="직접 추가할 이메일" required><label><input id="memberCanRead" type="checkbox" checked> 열람 허용</label><label><input id="memberCanWrite" type="checkbox"> 상태 편집 허용</label><button class="button button-primary" type="submit">권한 저장</button></form>
+        <div class="section-heading"><div><h3>사용자 권한</h3><p>열람은 보기 전용이며, 편집은 관리자와 동일한 권한입니다.</p></div></div>
+        <form id="memberForm" class="member-form"><input id="memberEmail" type="email" placeholder="직접 추가할 이메일" required><label><input id="memberCanRead" type="checkbox" checked> 열람 허용</label><label><input id="memberCanWrite" type="checkbox"> 편집 허용</label><button class="button button-primary" type="submit">권한 저장</button></form>
         <div id="memberManageList" class="manage-list"></div>
       </section>
     </div>
@@ -146,6 +146,6 @@
       }
     }, 8000);
   </script>
-  <script type="module" src="./app.js?v=6.0.0"></script>
+  <script type="module" src="./app.js?v=6.0.1"></script>
 </body>
 </html>

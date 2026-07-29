@@ -1,4 +1,4 @@
-import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.0.0";
+import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.0.1";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   browserLocalPersistence,
@@ -27,7 +27,7 @@ import {
 
 const $ = (id) => document.getElementById(id);
 const STATUS = ["대기", "진행중", "이슈", "완료"];
-const ROLE_LABEL = { viewer: "열람 전용", editor: "상태 편집자", admin: "관리자" };
+const ROLE_LABEL = { viewer: "열람 전용", editor: "편집자", admin: "관리자" };
 
 const state = {
   user: null,
@@ -59,11 +59,11 @@ function isOwnerEmail(email) {
 }
 
 function isAdmin() {
-  return state.role === "admin";
+  return state.role === "admin" || state.role === "editor";
 }
 
 function canEditStatus() {
-  return state.role === "admin" || state.role === "editor";
+  return isAdmin();
 }
 
 function scopedTasks() {
@@ -517,7 +517,7 @@ function renderBoard() {
   }).join("");
 
   if (!allCategories.length) {
-    $("board").innerHTML = `<div class="empty-state"><strong>아직 등록된 카테고리가 없습니다</strong>${isAdmin() ? "목록 관리에서 카테고리를 추가하거나 기본 목록을 만들어 주세요." : "관리자가 현황판을 준비 중입니다."}</div>`;
+    $("board").innerHTML = `<div class="empty-state"><strong>아직 등록된 카테고리가 없습니다</strong>${isAdmin() ? "목록 관리에서 카테고리를 추가하거나 기본 목록을 만들어 주세요." : "편집 권한이 있는 사용자가 현황판을 준비 중입니다."}</div>`;
   } else if (!visibleCategories) {
     $("board").innerHTML = '<div class="empty-state"><strong>조건에 맞는 항목이 없습니다</strong>검색어나 상태 필터를 변경해 보세요.</div>';
   } else {
@@ -874,7 +874,7 @@ function renderPermissions() {
           <div class="manage-actions">
             <span class="member-permissions">
               <label><input type="checkbox" data-member-read ${member.canRead === true ? "checked" : ""}> 열람</label>
-              <label><input type="checkbox" data-member-write ${member.canWrite === true ? "checked" : ""}> 상태 편집</label>
+              <label><input type="checkbox" data-member-write ${member.canWrite === true ? "checked" : ""}> 편집</label>
             </span>
             <button class="button" type="button" data-member-save="${escapeHtml(member.email)}">저장</button>
             <button class="button button-danger" type="button" data-member-delete="${escapeHtml(member.email)}">삭제</button>

@@ -1,4 +1,4 @@
-# STATUS-BOARD Firebase v6.0.0
+# STATUS-BOARD Firebase v6.0.1
 
 GitHub Pages에 바로 올릴 수 있는 행사 준비 현황판입니다.
 
@@ -25,6 +25,12 @@ GitHub Pages에 바로 올릴 수 있는 행사 준비 현황판입니다.
 
 따라서 GitHub 파일을 덮어써도 Firestore에 등록한 기존 데이터는 삭제되지 않습니다. 실제 데이터 삭제는 화면에서 삭제 버튼을 누르고 확인한 경우에만 발생합니다.
 
+## 권한 모델
+
+- 열람 권한: 현황판을 보기만 할 수 있습니다.
+- 편집 권한: 관리자와 동일하게 카테고리, 항목, 상태, 순서, 사용자 권한을 관리할 수 있습니다.
+- 관리자: `config.js`에 지정된 소유자 계정이며 항상 전체 권한을 가집니다.
+
 ## 업로드 방법
 
 ZIP을 풀고 폴더 안의 파일을 GitHub 저장소 최상위에 모두 덮어쓰세요.
@@ -50,9 +56,9 @@ STATUS-BOARD/
 
 ## Firestore 규칙
 
-v5.1.1에서 신규 로그인 사용자가 승인 대기 상태로 정상 등록되고 있다면, 이번 v6은 보안 규칙 변경이 없으므로 다시 게시할 필요가 없습니다.
+v6.0.1은 편집 권한 범위를 확장했으므로 저장소의 `firestore.rules`를 Firebase에 반드시 다시 게시해야 합니다.
 
-`firestore.rules`는 백업과 신규 설치를 위해 ZIP에 함께 포함했습니다.
+GitHub에 파일을 올리는 것만으로는 Firestore 보안 규칙이 적용되지 않습니다. Firebase Console의 `Firestore Database` → `규칙`에서 `firestore.rules`의 전체 내용을 붙여넣고 `게시`를 누르세요.
 
 ## 관리자
 

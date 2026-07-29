@@ -29,7 +29,7 @@ service cloud.firestore {
         || (isMember() && memberData().canRead == true);
     }
 
-    function canWriteStatus() {
+    function canEdit() {
       return isOwner()
         || (isMember()
           && memberData().canRead == true
@@ -54,23 +54,19 @@ service cloud.firestore {
 
     match /categories/{categoryId} {
       allow read: if canRead();
-      allow create, update, delete: if isOwner();
+      allow create, update, delete: if canEdit();
     }
 
     match /tasks/{taskId} {
       allow read: if canRead();
-      allow create, delete: if isOwner();
-      allow update: if isOwner()
-        || (canWriteStatus()
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["status", "updatedAt", "updatedBy"]));
+      allow create, update, delete: if canEdit();
     }
 
     match /members/{email} {
-      allow read: if isOwner()
+      allow read: if canEdit()
         || (signedIn() && request.auth.token.email == email);
-      allow create: if isOwner() || isOwnPendingRegistration(email);
-      allow update, delete: if isOwner();
+      allow create: if canEdit() || isOwnPendingRegistration(email);
+      allow update, delete: if canEdit();
     }
 
     match /{document=**} {
