@@ -1,13 +1,11 @@
-STATUS-BOARD Firebase v6.0.2
+OpenAI Game Hackathon Status Board v6.1.0
 
-- GPT-inspired left sidebar and workspace layout
-- OpenAI logo and branding removed
-- Top bar simplified to Excel, list management, permission management, and profile
-- Category navigation in left sidebar
-- Task order can be changed by drag-and-drop or arrow buttons
-- Existing Firebase project, collection names, and document fields preserved
-- Viewer access is read-only
-- Editor access now has the same management permissions as the owner
-- Firestore rules updated for full editor access
-- OpenAI Game Hackathon in Seoul event title added to the login screen and top bar
-- iPhone home screen standalone mode and safe-area support added
+- Official OpenAI wordmark in login and top navigation
+- Minimal flat checklist design
+- White, black, and blue-violet palette
+- Collapsible category lists
+- Clear completion check and strikethrough
+- Optional assignee field with non-destructive "미지정" fallback
+- Custom note-style iPhone/PWA home screen icon
+- Existing Firebase collections and records preserved
+- No Firestore rules change from v6.0.2

@@ -1,4 +1,4 @@
-import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.0.2";
+import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.1.0";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   browserLocalPersistence,
@@ -42,7 +42,9 @@ const state = {
   accessDenied: false,
   categoriesLoaded: false,
   tasksLoaded: false,
-  accessUnsub: null
+  accessUnsub: null,
+  expandedCategoryIds: new Set(),
+  expansionInitialized: false
 };
 
 let app;
@@ -97,19 +99,12 @@ function toggleProfileMenu() {
   button.setAttribute("aria-expanded", String(willOpen));
 }
 
-function setSidebarOpen(open) {
-  document.body.classList.toggle("sidebar-open", Boolean(open));
-  const backdrop = $("sidebarBackdrop");
-  if (backdrop) backdrop.hidden = !open;
-}
-
 function selectCategory(categoryId) {
   const valid = categoryId === "all" || state.categories.some((category) => category.id === categoryId);
   state.selectedCategoryId = valid ? categoryId : "all";
   state.filter = "전체";
   hideTaskComposer();
   render();
-  setSidebarOpen(false);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -117,17 +112,6 @@ function renderSidebar() {
   if (state.selectedCategoryId !== "all" && !state.categories.some((category) => category.id === state.selectedCategoryId)) {
     state.selectedCategoryId = "all";
   }
-  const categories = state.categories.slice().sort(sortByOrder);
-  const total = state.tasks.length;
-  const allButton = `<button class="nav-item ${state.selectedCategoryId === "all" ? "active" : ""}" type="button" data-category-select="all"><span class="nav-icon">●</span><span class="nav-label">전체 보기</span><span class="nav-count">${total}</span></button>`;
-  const categoryButtons = categories.map((category, index) => {
-    const count = state.tasks.filter((task) => task.categoryId === category.id).length;
-    return `<button class="nav-item ${state.selectedCategoryId === category.id ? "active" : ""}" type="button" data-category-select="${category.id}"><span class="nav-icon">${String(index + 1).padStart(2, "0")}</span><span class="nav-label">${escapeHtml(category.name)}</span><span class="nav-count">${count}</span></button>`;
-  }).join("");
-  $("categoryNav").innerHTML = allButton + categoryButtons;
-  $("categoryNav").querySelectorAll("[data-category-select]").forEach((button) => {
-    button.addEventListener("click", () => selectCategory(button.dataset.categorySelect));
-  });
 }
 
 function escapeHtml(value) {
@@ -377,6 +361,10 @@ function subscribeToData() {
     collection(db, "categories"),
     (snapshot) => {
       state.categories = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort(sortByOrder);
+      if (!state.expansionInitialized && state.categories.length) {
+        state.expandedCategoryIds.add(state.categories[0].id);
+        state.expansionInitialized = true;
+      }
       state.categoriesLoaded = true;
       updateConnectedState();
       render();
@@ -436,11 +424,8 @@ function renderHeader() {
   const tasks = scopedTasks();
   const stats = getStats(tasks);
   document.title = CONFIG.title;
-  $("brandTitle").textContent = "OpenAI Hackathon";
-  $("viewTitle").textContent = category?.name || "전체 보기";
-  $("viewSubtitle").textContent = category
-    ? `${stats.total}개 항목 · 완료 ${stats.done}개`
-    : `전체 ${state.categories.length}개 목록 · ${stats.total}개 항목`;
+  $("viewTitle").textContent = category?.name || "전체 진행";
+  $("viewSubtitle").textContent = `${stats.total}개 중 ${stats.done}개 완료`;
   $("completionRate").textContent = stats.percent;
   $("completionFill").style.width = `${stats.percent}%`;
 }
@@ -472,7 +457,7 @@ function filteredTasks(categoryId) {
     .filter((task) => state.filter === "전체" || task.status === state.filter)
     .filter((task) => {
       if (!search) return true;
-      return [task.title, task.memo, task.dueDate]
+      return [task.title, task.assignee, task.memo, task.dueDate]
         .some((value) => String(value || "").toLocaleLowerCase("ko").includes(search));
     })
     .sort(sortByOrder);
@@ -485,13 +470,21 @@ function taskRow(task, orderedTasks) {
     : `<span class="status-pill" data-status="${escapeHtml(status)}">${escapeHtml(status)}</span>`;
   const deadline = dueDateInfo(task.dueDate, status);
   const memo = String(task.memo || "").trim();
+  const assignee = String(task.assignee || "").trim() || "미지정";
   const orderIndex = orderedTasks.findIndex((item) => item.id === task.id);
-  return `<div class="task-row" data-task-row="${task.id}" ${isAdmin() ? 'draggable="true"' : ""}>
-    <div class="task-name-cell">${isAdmin() ? `<button class="drag-handle" type="button" tabindex="-1" title="드래그하여 순서 변경" aria-label="${escapeHtml(task.title)} 순서 이동">⠿</button>` : ""}<span class="task-title">${escapeHtml(task.title)}</span></div>
-    <div>${statusControl}</div>
-    <span class="deadline deadline-${deadline.className}">${escapeHtml(deadline.text)}</span>
-    <p class="task-memo ${memo ? "" : "empty"}">${memo ? escapeHtml(memo) : "메모 없음"}</p>
-    ${isAdmin() ? `<span class="task-actions"><span class="task-order-actions"><button class="button button-small button-icon" type="button" data-task-up="${task.id}" title="위로 이동" ${orderIndex <= 0 ? "disabled" : ""}>↑</button><button class="button button-small button-icon" type="button" data-task-down="${task.id}" title="아래로 이동" ${orderIndex >= orderedTasks.length - 1 ? "disabled" : ""}>↓</button></span><button class="button button-small" type="button" data-inline-edit="${task.id}">편집</button><button class="button button-small button-danger" type="button" data-inline-delete="${task.id}">삭제</button></span>` : '<span></span>'}
+  const check = isAdmin()
+    ? `<button class="task-check" type="button" data-task-complete="${task.id}" aria-label="${escapeHtml(task.title)} ${status === "완료" ? "완료 취소" : "완료 처리"}">${status === "완료" ? "✓" : ""}</button>`
+    : `<span class="task-check" aria-hidden="true">${status === "완료" ? "✓" : ""}</span>`;
+  return `<div class="task-row ${status === "완료" ? "is-complete" : ""}" data-task-row="${task.id}" ${isAdmin() ? 'draggable="true"' : ""}>
+    <div class="task-main">
+      ${check}
+      <div class="task-copy">
+        <strong class="task-title">${escapeHtml(task.title)}</strong>
+        <p class="task-meta"><span class="task-assignee">${escapeHtml(assignee)}</span><span class="deadline deadline-${deadline.className}">${escapeHtml(deadline.text)}</span>${memo ? `<span class="task-memo">${escapeHtml(memo)}</span>` : ""}</p>
+      </div>
+    </div>
+    <div class="task-state">${statusControl}</div>
+    ${isAdmin() ? `<span class="task-actions"><span class="task-order-actions"><button class="button button-small button-icon" type="button" data-task-up="${task.id}" title="위로 이동" ${orderIndex <= 0 ? "disabled" : ""}>↑</button><button class="button button-small button-icon" type="button" data-task-down="${task.id}" title="아래로 이동" ${orderIndex >= orderedTasks.length - 1 ? "disabled" : ""}>↓</button></span><button class="button button-small" type="button" data-inline-edit="${task.id}">편집</button><button class="button button-small button-danger" type="button" data-inline-delete="${task.id}">삭제</button></span>` : ""}
   </div>`;
 }
 
@@ -509,10 +502,22 @@ function renderBoard() {
     if (shouldHide) return "";
     visibleCategories += 1;
     const completed = allTasks.filter((task) => task.status === "완료").length;
-    return `<section class="category" id="category-${category.id}">
-      <div class="category-header"><span class="category-number">${String(globalIndex + 1).padStart(2, "0")}</span><strong class="category-title">${escapeHtml(category.name)}</strong><span class="category-count">${completed}/${allTasks.length}</span>${isAdmin() ? `<span class="category-actions"><button class="button" type="button" data-quick-add="${category.id}">+ 항목 추가</button></span>` : ""}</div>
-      <div class="task-table-head"><span>항목</span><span>상태</span><span>마감일</span><span>메모</span><span></span></div>
-      <div class="task-list">${visibleTasks.length ? visibleTasks.map((task) => taskRow(task, allTasks)).join("") : '<div class="empty-state"><strong>표시할 항목이 없습니다</strong>항목을 추가하거나 상태 필터와 검색어를 변경해 보세요.</div>'}</div>
+    const autoExpand = Boolean(state.search || state.filter !== "전체");
+    const expanded = autoExpand || state.expandedCategoryIds.has(category.id) || state.selectedCategoryId !== "all";
+    const percent = allTasks.length ? Math.round((completed / allTasks.length) * 100) : 0;
+    return `<section class="category ${expanded ? "is-expanded" : ""}" id="category-${category.id}">
+      <div class="category-header">
+        <button class="category-toggle" type="button" data-category-toggle="${category.id}" aria-expanded="${expanded}">
+          <span class="category-chevron" aria-hidden="true">⌄</span>
+          <span class="category-number">${String(globalIndex + 1).padStart(2, "0")}</span>
+          <strong class="category-title">${escapeHtml(category.name)}</strong>
+          <span class="category-progress"><span>${completed}/${allTasks.length}</span><i><b style="width:${percent}%"></b></i></span>
+        </button>
+        ${isAdmin() ? `<button class="button button-small category-add" type="button" data-quick-add="${category.id}">+ 추가</button>` : ""}
+      </div>
+      <div class="category-content" ${expanded ? "" : "hidden"}>
+        <div class="task-list">${visibleTasks.length ? visibleTasks.map((task) => taskRow(task, allTasks)).join("") : '<div class="empty-state"><strong>표시할 항목이 없습니다</strong>항목을 추가하거나 필터를 변경해 보세요.</div>'}</div>
+      </div>
     </section>`;
   }).join("");
 
@@ -525,7 +530,17 @@ function renderBoard() {
   }
 
   $("board").querySelectorAll("[data-task-status]").forEach((select) => select.addEventListener("change", () => changeTaskStatus(select)));
-  $("board").querySelectorAll("[data-quick-add]").forEach((button) => button.addEventListener("click", () => showTaskComposer(null, button.dataset.quickAdd)));
+  $("board").querySelectorAll("[data-category-toggle]").forEach((button) => button.addEventListener("click", () => {
+    const categoryId = button.dataset.categoryToggle;
+    if (state.expandedCategoryIds.has(categoryId)) state.expandedCategoryIds.delete(categoryId);
+    else state.expandedCategoryIds.add(categoryId);
+    renderBoard();
+  }));
+  $("board").querySelectorAll("[data-task-complete]").forEach((button) => button.addEventListener("click", () => toggleTaskCompletion(button.dataset.taskComplete)));
+  $("board").querySelectorAll("[data-quick-add]").forEach((button) => button.addEventListener("click", () => {
+    state.expandedCategoryIds.add(button.dataset.quickAdd);
+    showTaskComposer(null, button.dataset.quickAdd);
+  }));
   $("board").querySelectorAll("[data-task-up]").forEach((button) => button.addEventListener("click", () => moveTask(button.dataset.taskUp, -1)));
   $("board").querySelectorAll("[data-task-down]").forEach((button) => button.addEventListener("click", () => moveTask(button.dataset.taskDown, 1)));
   $("board").querySelectorAll("[data-inline-edit]").forEach((button) => button.addEventListener("click", () => showTaskComposer(state.tasks.find((task) => task.id === button.dataset.inlineEdit))));
@@ -581,6 +596,26 @@ async function changeTaskStatus(select) {
   }
 }
 
+async function toggleTaskCompletion(taskId) {
+  if (!canEditStatus()) return;
+  const task = state.tasks.find((item) => item.id === taskId);
+  if (!task) return;
+  const nextStatus = task.status === "완료" ? "대기" : "완료";
+  setSync("저장 중", "saving");
+  try {
+    await updateDoc(doc(db, "tasks", task.id), {
+      status: nextStatus,
+      updatedAt: serverTimestamp(),
+      updatedBy: state.user.uid
+    });
+    notify(nextStatus === "완료" ? "완료로 표시했습니다." : "완료 표시를 해제했습니다.");
+  } catch (error) {
+    notify(firestoreErrorMessage(error), true);
+  } finally {
+    setSync("실시간 연결", "ok");
+  }
+}
+
 function showTaskComposer(task = null, categoryId = null) {
   if (!isAdmin()) return;
   if (!state.categories.length) {
@@ -598,6 +633,7 @@ function showTaskComposer(task = null, categoryId = null) {
   $("taskTitle").value = task?.title || "";
   $("taskStatus").value = STATUS.includes(task?.status) ? task.status : "대기";
   $("taskDueDate").value = normalizeDueDate(task?.dueDate);
+  $("taskAssignee").value = task?.assignee || "";
   $("taskMemo").value = task?.memo || "";
   $("taskComposer").hidden = false;
   $("taskComposer").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -619,6 +655,7 @@ async function saveTask(event) {
   const title = $("taskTitle").value.trim();
   const status = $("taskStatus").value;
   const dueDate = normalizeDueDate($("taskDueDate").value);
+  const assignee = $("taskAssignee").value.trim();
   const memo = $("taskMemo").value.trim();
   if (!title || !categoryId || !STATUS.includes(status)) return;
 
@@ -633,6 +670,7 @@ async function saveTask(event) {
         title,
         status,
         dueDate,
+        assignee,
         memo,
         updatedAt: serverTimestamp(),
         updatedBy: state.user.uid
@@ -645,6 +683,7 @@ async function saveTask(event) {
         title,
         status,
         dueDate,
+        assignee,
         memo,
         order: maxOrder + 100,
         createdAt: serverTimestamp(),
@@ -1024,10 +1063,11 @@ function exportExcel() {
   });
 
   const xmlRows = [
-    ["카테고리", "항목", "상태", "마감일", "메모"],
+    ["카테고리", "항목", "담당자", "상태", "마감일", "메모"],
     ...rows.map((task) => [
       categories.get(task.categoryId) || "",
       task.title || "",
+      task.assignee || "",
       task.status || "",
       normalizeDueDate(task.dueDate),
       task.memo || ""
@@ -1072,9 +1112,6 @@ function bindStaticEvents() {
   bindEvent("cancelTaskBtn", "click", hideTaskComposer);
   bindEvent("manageBtn", "click", () => { renderManagement(); openDialog("manageDialog"); closeProfileMenu(); });
   bindEvent("permissionBtn", "click", () => { renderPermissions(); openDialog("permissionDialog"); closeProfileMenu(); });
-  bindEvent("sidebarToggle", "click", () => setSidebarOpen(true));
-  bindEvent("sidebarClose", "click", () => setSidebarOpen(false));
-  bindEvent("sidebarBackdrop", "click", () => setSidebarOpen(false));
   bindEvent("categoryForm", "submit", addCategory);
   bindEvent("taskForm", "submit", saveTask);
   bindEvent("memberForm", "submit", saveNewMember);
@@ -1085,7 +1122,6 @@ function bindStaticEvents() {
     const wrap = event.target.closest?.(".profile-wrap");
     if (!wrap) closeProfileMenu();
   });
-  window.addEventListener("resize", () => { if (window.innerWidth > 900) setSidebarOpen(false); });
 }
 
 async function handleAuthState(user) {
@@ -1095,12 +1131,13 @@ async function handleAuthState(user) {
   state.tasks = [];
   state.members = [];
   state.accessDenied = false;
+  state.expandedCategoryIds.clear();
+  state.expansionInitialized = false;
 
   if (!user) {
     state.role = "viewer";
     state.selectedCategoryId = "all";
     closeProfileMenu();
-    setSidebarOpen(false);
     hideTaskComposer();
     $("appShell").hidden = true;
     $("loginGate").hidden = false;
