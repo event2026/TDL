@@ -60,6 +60,4 @@ v6.0.1은 편집 권한 범위를 확장했으므로 저장소의 `firestore.rul
 
 GitHub에 파일을 올리는 것만으로는 Firestore 보안 규칙이 적용되지 않습니다. Firebase Console의 `Firestore Database` → `규칙`에서 `firestore.rules`의 전체 내용을 붙여넣고 `게시`를 누르세요.
 
-## 관리자
 
-`bctf.sh@gmail.com`
