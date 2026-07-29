@@ -1,0 +1,80 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function isOwner() {
+      return signedIn()
+        && request.auth.token.email == "bctf.sh@gmail.com";
+    }
+
+    function memberPath() {
+      return /databases/$(database)/documents/members/$(request.auth.token.email);
+    }
+
+    function isMember() {
+      return signedIn() && exists(memberPath());
+    }
+
+    function memberData() {
+      return get(memberPath()).data;
+    }
+
+    function canRead() {
+      return isOwner()
+        || (isMember() && memberData().canRead == true);
+    }
+
+    function canWriteStatus() {
+      return isOwner()
+        || (isMember()
+          && memberData().canRead == true
+          && memberData().canWrite == true);
+    }
+
+    function isOwnPendingRegistration(email) {
+      return signedIn()
+        && email == request.auth.token.email
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.canRead == false
+        && request.resource.data.canWrite == false
+        && request.resource.data.status == "pending"
+        && request.resource.data.keys().hasAll([
+          "email", "uid", "canRead", "canWrite", "status", "requestedAt", "updatedAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "email", "uid", "displayName", "photoURL", "canRead", "canWrite", "status", "requestedAt", "updatedAt"
+        ]);
+    }
+
+    match /categories/{categoryId} {
+      allow read: if canRead();
+      allow create, update, delete: if isOwner();
+    }
+
+    match /tasks/{taskId} {
+      allow read: if canRead();
+      allow create, delete: if isOwner();
+      allow update: if isOwner()
+        || (canWriteStatus()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["status", "updatedAt", "updatedBy"]));
+    }
+
+    match /members/{email} {
+      allow read: if isOwner()
+        || (signedIn() && request.auth.token.email == email);
+      allow create: if isOwner() || isOwnPendingRegistration(email);
+      allow update, delete: if isOwner();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

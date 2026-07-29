@@ -1,0 +1,8 @@
+STATUS-BOARD Firebase v6.0.0
+
+- GPT-inspired left sidebar and workspace layout
+- OpenAI logo and branding removed
+- Top bar simplified to Excel, list management, permission management, and profile
+- Category navigation in left sidebar
+- Task order can be changed by drag-and-drop or arrow buttons
+- Existing Firebase project, collection names, and document fields preserved
