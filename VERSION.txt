@@ -1,4 +1,4 @@
-STATUS-BOARD Firebase v6.0.1
+STATUS-BOARD Firebase v6.0.2
 
 - GPT-inspired left sidebar and workspace layout
 - OpenAI logo and branding removed
@@ -9,3 +9,5 @@ STATUS-BOARD Firebase v6.0.1
 - Viewer access is read-only
 - Editor access now has the same management permissions as the owner
 - Firestore rules updated for full editor access
+- OpenAI Game Hackathon in Seoul event title added to the login screen and top bar
+- iPhone home screen standalone mode and safe-area support added

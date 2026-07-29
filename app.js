@@ -1,4 +1,4 @@
-import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.0.1";
+import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.0.2";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   browserLocalPersistence,
@@ -436,7 +436,7 @@ function renderHeader() {
   const tasks = scopedTasks();
   const stats = getStats(tasks);
   document.title = CONFIG.title;
-  $("brandTitle").textContent = "Status Board";
+  $("brandTitle").textContent = "OpenAI Hackathon";
   $("viewTitle").textContent = category?.name || "전체 보기";
   $("viewSubtitle").textContent = category
     ? `${stats.total}개 항목 · 완료 ${stats.done}개`

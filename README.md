@@ -1,6 +1,12 @@
-# STATUS-BOARD Firebase v6.0.1
+# STATUS-BOARD Firebase v6.0.2
 
 GitHub Pages에 바로 올릴 수 있는 행사 준비 현황판입니다.
+
+행사명: **OpenAI Game Hackathon in Seoul**
+
+- 행사명을 로그인 화면과 상단 바에 표시합니다.
+- iPhone Safari에서 홈 화면에 추가한 뒤 실행하면 독립형 웹 앱으로 열립니다.
+- 노치와 홈 인디케이터가 있는 화면의 안전영역을 지원합니다.
 
 ## v6 디자인 변경
 
@@ -43,6 +49,7 @@ STATUS-BOARD/
 ├── app.js
 ├── firestore.rules
 ├── firebase.json
+├── manifest.webmanifest
 ├── 404.html
 ├── README.md
 ├── DATA-SAFETY.md
@@ -59,5 +66,3 @@ STATUS-BOARD/
 v6.0.1은 편집 권한 범위를 확장했으므로 저장소의 `firestore.rules`를 Firebase에 반드시 다시 게시해야 합니다.
 
 GitHub에 파일을 올리는 것만으로는 Firestore 보안 규칙이 적용되지 않습니다. Firebase Console의 `Firestore Database` → `규칙`에서 `firestore.rules`의 전체 내용을 붙여넣고 `게시`를 누르세요.
-
-

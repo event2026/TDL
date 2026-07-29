@@ -1,5 +1,5 @@
 export const STATUS_BOARD_CONFIG = {
-  title: "프로젝트 진행 현황",
+  title: "OpenAI Game Hackathon in Seoul",
   ownerEmail: "bctf.sh@gmail.com",
   firebase: {
     apiKey: "AIzaSyDhaJronK1nCvAs0l6k4JvIw24y2gQalAc",

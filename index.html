@@ -2,12 +2,20 @@
 <html lang="ko" data-app-ready="false">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#f7f7f5">
-  <title>프로젝트 진행 현황</title>
-  <meta name="status-board-version" content="6.0.1">
-  <link rel="stylesheet" href="./styles.css?v=6.0.1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="OpenAI Hackathon">
+  <meta name="application-name" content="OpenAI Hackathon">
+  <meta name="format-detection" content="telephone=no">
+  <title>OpenAI Game Hackathon in Seoul</title>
+  <meta name="description" content="OpenAI Game Hackathon in Seoul 행사 준비 현황판">
+  <meta name="status-board-version" content="6.0.2">
+  <link rel="manifest" href="./manifest.webmanifest?v=6.0.2">
+  <link rel="stylesheet" href="./styles.css?v=6.0.2">
 </head>
 <body>
   <noscript><div class="fatal-message">이 현황판은 JavaScript가 필요합니다. 브라우저 설정에서 JavaScript를 허용해 주세요.</div></noscript>
@@ -16,7 +24,7 @@
     <div class="login-card">
       <div class="login-brand" aria-hidden="true">SB</div>
       <p class="eyebrow">STATUS BOARD</p>
-      <h1>프로젝트 진행 현황</h1>
+      <h1><span>OpenAI</span>Game Hackathon in Seoul</h1>
       <p class="login-description">Google 계정으로 로그인하면 권한에 따라 현황을 열람하거나 편집할 수 있습니다.</p>
       <button id="loginBtn" class="button button-primary button-large" type="button"><span class="google-mark" aria-hidden="true">G</span>Google로 로그인</button>
       <p id="loginStatus" class="login-status">Firebase 연결을 준비하고 있습니다.</p>
@@ -51,6 +59,10 @@
       <section class="workspace">
         <header class="topbar">
           <button id="sidebarToggle" class="icon-button mobile-menu-button" type="button" aria-label="목록 메뉴 열기">☰</button>
+          <a class="event-title" href="#" data-category-link="all" aria-label="OpenAI Game Hackathon in Seoul 전체 보기">
+            <span>OpenAI</span>
+            <strong>Game Hackathon in Seoul</strong>
+          </a>
           <div class="topbar-spacer"></div>
           <div class="topbar-actions">
             <button id="exportBtn" class="button" type="button">Excel 내려받기</button>
@@ -146,6 +158,6 @@
       }
     }, 8000);
   </script>
-  <script type="module" src="./app.js?v=6.0.1"></script>
+  <script type="module" src="./app.js?v=6.0.2"></script>
 </body>
 </html>
