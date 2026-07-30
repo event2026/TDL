@@ -1,4 +1,4 @@
-import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.1.5";
+import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.2.0";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   browserLocalPersistence,
@@ -36,6 +36,7 @@ const state = {
   filter: "전체",
   search: "",
   selectedCategoryId: "all",
+  uiMode: "edit",
   unsubs: [],
   accessDenied: false,
   categoriesLoaded: false,
@@ -62,8 +63,12 @@ function isAdmin() {
   return state.role === "admin" || state.role === "editor";
 }
 
+function isEditMode() {
+  return isAdmin() && state.uiMode === "edit";
+}
+
 function canEditStatus() {
-  return isAdmin();
+  return isEditMode();
 }
 
 function scopedTasks() {
@@ -455,7 +460,7 @@ function renderFilters() {
     ["대기", stats.waiting, "waiting"]
   ];
   $("statusCards").innerHTML = cards.map(([name, count, className]) => (
-    `<button class="stat-card ${state.filter === name ? "active" : ""}" type="button" data-filter="${name}" aria-pressed="${state.filter === name}"><i class="stat-dot ${className}"></i><span class="stat-label">${name}</span><strong>${count}</strong></button>`
+    `<button class="stat-card status-${className} ${state.filter === name ? "active" : ""}" type="button" data-filter="${name}" aria-pressed="${state.filter === name}"><i class="stat-dot ${className}"></i><span class="stat-label">${name}</span><strong>${count}</strong></button>`
   )).join("");
   $("statusCards").querySelectorAll("[data-filter]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -484,10 +489,16 @@ function taskRow(task) {
   const statusControl = canEditStatus()
     ? `<select class="status-control" data-task-status="${task.id}" data-status="${escapeHtml(status)}" aria-label="${escapeHtml(task.title)} 상태">${STATUS.map((item) => `<option value="${item}" ${item === status ? "selected" : ""}>${item}</option>`).join("")}</select>`
     : `<span class="status-pill" data-status="${escapeHtml(status)}">${escapeHtml(status)}</span>`;
-  const deadline = dueDateInfo(task.dueDate, status);
+  const dueDate = normalizeDueDate(task.dueDate);
+  const deadline = dueDate ? dueDateInfo(dueDate, status) : null;
   const memo = String(task.memo || "").trim();
-  const assignee = String(task.assignee || "").trim() || "미지정";
-  const check = isAdmin()
+  const assignee = String(task.assignee || "").trim();
+  const metaItems = [
+    assignee ? `<span class="task-assignee">${escapeHtml(assignee)}</span>` : "",
+    deadline ? `<span class="deadline deadline-${deadline.className}">${escapeHtml(deadline.text)}</span>` : ""
+  ].filter(Boolean);
+  const taskMeta = metaItems.length ? `<p class="task-meta">${metaItems.join("")}</p>` : "";
+  const check = isEditMode()
     ? `<button class="task-check" type="button" data-task-complete="${task.id}" aria-label="${escapeHtml(task.title)} ${status === "완료" ? "완료 취소" : "완료 처리"}">${status === "완료" ? "✓" : ""}</button>`
     : `<span class="task-check" aria-hidden="true">${status === "완료" ? "✓" : ""}</span>`;
   const memoDetails = memo
@@ -499,18 +510,18 @@ function taskRow(task) {
         </div>
       </details>`
     : "";
-  return `<div class="task-row ${status === "완료" ? "is-complete" : ""}" data-task-row="${task.id}">
+  return `<div class="task-row ${status === "완료" ? "is-complete" : ""}" data-task-row="${task.id}" data-status="${escapeHtml(status)}">
     <div class="task-main">
-      ${isAdmin() ? `<span class="drag-handle" draggable="true" title="드래그하여 순서 변경" aria-label="${escapeHtml(task.title)} 순서 이동">⠿</span>` : ""}
+      ${isEditMode() ? `<span class="drag-handle" draggable="true" title="드래그하여 순서 변경" aria-label="${escapeHtml(task.title)} 순서 이동">⠿</span>` : ""}
       ${check}
       <div class="task-copy">
         <strong class="task-title">${escapeHtml(task.title)}</strong>
-        <p class="task-meta"><span class="task-assignee">${escapeHtml(assignee)}</span><span class="deadline deadline-${deadline.className}">${escapeHtml(deadline.text)}</span></p>
+        ${taskMeta}
         ${memoDetails}
       </div>
     </div>
     <div class="task-state">${statusControl}</div>
-    ${isAdmin() ? `<span class="task-actions"><button class="button button-small" type="button" data-inline-edit="${task.id}">편집</button><button class="button button-small button-danger" type="button" data-inline-delete="${task.id}">삭제</button></span>` : ""}
+    ${isEditMode() ? `<span class="task-actions"><button class="button button-small" type="button" data-inline-edit="${task.id}">편집</button><button class="button button-small button-danger" type="button" data-inline-delete="${task.id}">삭제</button></span>` : ""}
   </div>`;
 }
 
@@ -539,7 +550,7 @@ function renderBoard() {
           <strong class="category-title">${escapeHtml(category.name)}</strong>
           <span class="category-progress"><span>${completed}/${allTasks.length}</span><i><b style="width:${percent}%"></b></i></span>
         </button>
-        ${isAdmin() ? `<button class="button button-small category-add" type="button" data-quick-add="${category.id}">+ 추가</button>` : ""}
+        ${isEditMode() ? `<button class="button button-small category-add" type="button" data-quick-add="${category.id}">+ 추가</button>` : ""}
       </div>
       <div class="category-content" ${expanded ? "" : "hidden"}>
         <div class="task-list">${visibleTasks.length ? visibleTasks.map((task) => taskRow(task)).join("") : '<div class="empty-state"><strong>표시할 항목이 없습니다</strong>항목을 추가하거나 필터를 변경해 보세요.</div>'}</div>
@@ -548,7 +559,7 @@ function renderBoard() {
   }).join("");
 
   if (!allCategories.length) {
-    $("board").innerHTML = `<div class="empty-state"><strong>아직 등록된 카테고리가 없습니다</strong>${isAdmin() ? "목록 관리에서 카테고리를 추가하거나 기본 목록을 만들어 주세요." : "편집 권한이 있는 사용자가 현황판을 준비 중입니다."}</div>`;
+    $("board").innerHTML = `<div class="empty-state"><strong>아직 등록된 카테고리가 없습니다</strong>${isEditMode() ? "목록 관리에서 카테고리를 추가하거나 기본 목록을 만들어 주세요." : "편집 권한이 있는 사용자가 현황판을 준비 중입니다."}</div>`;
   } else if (!visibleCategories) {
     $("board").innerHTML = '<div class="empty-state"><strong>조건에 맞는 항목이 없습니다</strong>검색어나 상태 필터를 변경해 보세요.</div>';
   } else {
@@ -574,12 +585,30 @@ function renderBoard() {
 }
 
 function renderAccess() {
-  $("manageBtn").hidden = !isAdmin();
-  $("permissionBtn").hidden = !isAdmin();
+  const hasEditPermission = isAdmin();
+  const editing = isEditMode();
+  $("modeToggleBtn").hidden = !hasEditPermission;
+  $("modeToggleBtn").textContent = editing ? "뷰 모드" : "편집 모드";
+  $("modeToggleBtn").setAttribute("aria-pressed", String(!editing));
+  $("modeToggleBtn").title = editing ? "보기 전용 화면으로 전환" : "편집 화면으로 전환";
+  $("modeToggleBtn").classList.toggle("button-primary", hasEditPermission && !editing);
+  $("manageBtn").hidden = !editing;
+  $("permissionBtn").hidden = !editing;
   $("profileInitial").textContent = profileInitial();
   $("profileEmail").textContent = state.user?.email || "";
-  $("profileRole").textContent = ROLE_LABEL[state.role] || ROLE_LABEL.viewer;
-  if (!isAdmin()) hideTaskComposer();
+  $("profileRole").textContent = `${ROLE_LABEL[state.role] || ROLE_LABEL.viewer}${hasEditPermission && !editing ? " · 뷰 모드" : ""}`;
+  document.documentElement.dataset.uiMode = editing ? "edit" : "view";
+  if (!editing) hideTaskComposer();
+}
+
+function toggleUiMode() {
+  if (!isAdmin()) return;
+  state.uiMode = state.uiMode === "edit" ? "view" : "edit";
+  hideTaskComposer();
+  closeDialog("manageDialog");
+  closeDialog("permissionDialog");
+  render();
+  notify(state.uiMode === "view" ? "뷰 모드로 전환했습니다." : "편집 모드로 전환했습니다.");
 }
 
 function render() {
@@ -677,17 +706,20 @@ async function copyTaskMemo(taskId) {
 }
 
 function showTaskComposer(task = null, categoryId = null) {
-  if (!isAdmin()) return;
+  if (!isEditMode()) return;
   if (!state.categories.length) {
     notify("카테고리를 먼저 추가해 주세요.", true);
     return;
   }
 
   const categories = state.categories.slice().sort(sortByOrder);
+  const selectedCategoryId = task?.categoryId || categoryId || categories[0].id;
+  const selectedCategory = categories.find((category) => category.id === selectedCategoryId);
   $("taskComposerTitle").textContent = task ? "항목 편집" : "새 항목";
+  $("taskComposerContext").textContent = selectedCategory?.name || "항목";
   $("taskId").value = task?.id || "";
   $("taskCategory").innerHTML = categories.map((category) => (
-    `<option value="${category.id}" ${category.id === (task?.categoryId || categoryId) ? "selected" : ""}>${escapeHtml(category.name)}</option>`
+    `<option value="${category.id}" ${category.id === selectedCategoryId ? "selected" : ""}>${escapeHtml(category.name)}</option>`
   )).join("");
   if (!task && !categoryId) $("taskCategory").value = categories[0].id;
   $("taskTitle").value = task?.title || "";
@@ -695,20 +727,30 @@ function showTaskComposer(task = null, categoryId = null) {
   $("taskDueDate").value = normalizeDueDate(task?.dueDate);
   $("taskAssignee").value = task?.assignee || "";
   $("taskMemo").value = task?.memo || "";
-  $("taskComposer").hidden = false;
-  $("taskComposer").scrollIntoView({ behavior: "smooth", block: "start" });
-  window.setTimeout(() => $("taskTitle").focus(), 250);
+  const layer = $("taskComposerLayer");
+  window.clearTimeout(hideTaskComposer.timer);
+  layer.hidden = false;
+  document.body.classList.add("composer-open");
+  window.requestAnimationFrame(() => layer.classList.add("is-open"));
+  window.setTimeout(() => $("taskTitle").focus(), 180);
 }
 
 function hideTaskComposer() {
-  $("taskComposer").hidden = true;
+  const layer = $("taskComposerLayer");
+  if (!layer) return;
+  window.clearTimeout(hideTaskComposer.timer);
+  layer.classList.remove("is-open");
+  document.body.classList.remove("composer-open");
   $("taskForm").reset();
   $("taskId").value = "";
+  hideTaskComposer.timer = window.setTimeout(() => {
+    if (!layer.classList.contains("is-open")) layer.hidden = true;
+  }, 180);
 }
 
 async function saveTask(event) {
   event.preventDefault();
-  if (!isAdmin()) return;
+  if (!isEditMode()) return;
 
   const id = $("taskId").value;
   const categoryId = $("taskCategory").value;
@@ -902,7 +944,7 @@ async function moveTaskByDrop(sourceId, targetId) {
 }
 
 function bindTaskDragAndDrop() {
-  if (!isAdmin()) return;
+  if (!isEditMode()) return;
   let draggingId = "";
   const rows = [...$("board").querySelectorAll("[data-task-row]")];
   rows.forEach((row) => {
@@ -1171,7 +1213,14 @@ function bindStaticEvents() {
   bindEvent("profileButton", "click", (event) => { event.stopPropagation(); toggleProfileMenu(); });
   bindEvent("searchInput", "input", (event) => { state.search = event.target.value; renderBoard(); });
   bindEvent("exportBtn", "click", exportExcel);
+  bindEvent("modeToggleBtn", "click", toggleUiMode);
   bindEvent("cancelTaskBtn", "click", hideTaskComposer);
+  bindEvent("cancelTaskFooterBtn", "click", hideTaskComposer);
+  bindEvent("taskComposerBackdrop", "click", hideTaskComposer);
+  bindEvent("taskCategory", "change", () => {
+    const category = state.categories.find((item) => item.id === $("taskCategory").value);
+    $("taskComposerContext").textContent = category?.name || "항목";
+  });
   bindEvent("manageBtn", "click", () => { renderManagement(); openDialog("manageDialog"); closeProfileMenu(); });
   bindEvent("permissionBtn", "click", () => { renderPermissions(); openDialog("permissionDialog"); closeProfileMenu(); });
   bindEvent("categoryForm", "submit", addCategory);
@@ -1184,6 +1233,9 @@ function bindStaticEvents() {
     const wrap = event.target.closest?.(".profile-wrap");
     if (!wrap) closeProfileMenu();
   });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !$("taskComposerLayer").hidden) hideTaskComposer();
+  });
 }
 
 async function handleAuthState(user) {
@@ -1193,6 +1245,7 @@ async function handleAuthState(user) {
   state.tasks = [];
   state.members = [];
   state.accessDenied = false;
+  state.uiMode = "edit";
   state.expandedCategoryIds.clear();
   state.expansionInitialized = false;
 

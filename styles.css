@@ -9,6 +9,14 @@
   --accent-soft: #f0f1fa;
   --danger: #c65347;
   --danger-soft: #fbefed;
+  --status-done: #2f7357;
+  --status-done-soft: #edf6f1;
+  --status-doing: #405fc1;
+  --status-doing-soft: #edf1fb;
+  --status-issue: #b94b43;
+  --status-issue-soft: #fbefed;
+  --status-waiting: #766f62;
+  --status-waiting-soft: #f3f1ed;
   --radius: 12px;
   --page-width: 1120px;
   color-scheme: light;
@@ -34,6 +42,10 @@ body {
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+}
+
+body.composer-open {
+  overflow: hidden;
 }
 
 button,
@@ -417,9 +429,7 @@ button:disabled {
 }
 
 .stat-card.active {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px currentColor;
 }
 
 .stat-card strong {
@@ -440,15 +450,43 @@ button:disabled {
 }
 
 .stat-dot.done {
-  background: var(--accent);
+  background: var(--status-done);
 }
 
 .stat-dot.doing {
-  background: #788091;
+  background: var(--status-doing);
 }
 
 .stat-dot.issue {
-  background: var(--danger);
+  background: var(--status-issue);
+}
+
+.stat-dot.waiting {
+  background: var(--status-waiting);
+}
+
+.stat-card.status-done {
+  border-color: #cfe2d8;
+  color: var(--status-done);
+  background: var(--status-done-soft);
+}
+
+.stat-card.status-doing {
+  border-color: #d2d9f0;
+  color: var(--status-doing);
+  background: var(--status-doing-soft);
+}
+
+.stat-card.status-issue {
+  border-color: #ebcfca;
+  color: var(--status-issue);
+  background: var(--status-issue-soft);
+}
+
+.stat-card.status-waiting {
+  border-color: #ded9d0;
+  color: var(--status-waiting);
+  background: var(--status-waiting-soft);
 }
 
 .category {
@@ -554,14 +592,39 @@ button:disabled {
 }
 
 .task-row {
+  position: relative;
   display: grid;
   min-height: 65px;
-  padding: 11px 4px;
+  padding: 11px 4px 11px 10px;
   border-bottom: 1px solid var(--line);
   align-items: center;
   grid-template-columns: minmax(0, 1fr) 100px auto;
   gap: 14px;
   transition: background 120ms ease, opacity 120ms ease;
+}
+
+.task-row::before {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--status-waiting);
+  content: "";
+  opacity: 0.8;
+}
+
+.task-row[data-status="완료"]::before {
+  background: var(--status-done);
+}
+
+.task-row[data-status="진행중"]::before {
+  background: var(--status-doing);
+}
+
+.task-row[data-status="이슈"]::before {
+  background: var(--status-issue);
 }
 
 .task-row:hover {
@@ -753,9 +816,34 @@ button.task-check:hover {
   border: 1px solid var(--line);
   border-radius: 999px;
   outline: 0;
-  background: #fff;
+  color: var(--status-waiting);
+  background: var(--status-waiting-soft);
   font-size: 11px;
   font-weight: 650;
+}
+
+.status-control[data-status="완료"] {
+  border-color: #c5ddd1;
+  color: var(--status-done);
+  background: var(--status-done-soft);
+}
+
+.status-control[data-status="진행중"] {
+  border-color: #ccd5ef;
+  color: var(--status-doing);
+  background: var(--status-doing-soft);
+}
+
+.status-control[data-status="이슈"] {
+  border-color: #e7c8c3;
+  color: var(--status-issue);
+  background: var(--status-issue-soft);
+}
+
+.status-control[data-status="대기"] {
+  border-color: #dad5cb;
+  color: var(--status-waiting);
+  background: var(--status-waiting-soft);
 }
 
 .status-control:focus {
@@ -769,8 +857,9 @@ button.task-check:hover {
   height: 28px;
   padding: 0 10px;
   border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
+  border: 1px solid #dad5cb;
+  color: var(--status-waiting);
+  background: var(--status-waiting-soft);
   font-size: 11px;
   font-weight: 650;
   align-items: center;
@@ -778,13 +867,21 @@ button.task-check:hover {
 }
 
 .status-pill[data-status="완료"] {
-  color: var(--accent);
-  background: var(--accent-soft);
+  border-color: #c5ddd1;
+  color: var(--status-done);
+  background: var(--status-done-soft);
+}
+
+.status-pill[data-status="진행중"] {
+  border-color: #ccd5ef;
+  color: var(--status-doing);
+  background: var(--status-doing-soft);
 }
 
 .status-pill[data-status="이슈"] {
-  color: var(--danger);
-  background: var(--danger-soft);
+  border-color: #e7c8c3;
+  color: var(--status-issue);
+  background: var(--status-issue-soft);
 }
 
 .task-actions {
@@ -794,20 +891,76 @@ button.task-check:hover {
   gap: 5px;
 }
 
+.composer-layer {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  visibility: hidden;
+  justify-items: end;
+  pointer-events: none;
+}
+
+.composer-layer.is-open {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.composer-backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  opacity: 0;
+  background: rgba(17, 17, 17, 0.28);
+  transition: opacity 160ms ease;
+}
+
+.composer-layer.is-open .composer-backdrop {
+  opacity: 1;
+}
+
 .task-composer {
-  margin: 0 0 32px;
-  padding: 24px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
+  position: relative;
+  z-index: 1;
+  width: min(440px, 100vw);
+  height: 100dvh;
+  border-left: 1px solid var(--line);
+  background: #fff;
+  box-shadow: -18px 0 48px rgba(17, 17, 17, 0.12);
+  transform: translateX(100%);
+  transition: transform 180ms ease;
+}
+
+.composer-layer.is-open .task-composer {
+  transform: translateX(0);
+}
+
+.task-composer-form {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
 }
 
 .composer-heading {
   display: flex;
-  margin-bottom: 20px;
+  padding: max(20px, env(safe-area-inset-top)) 22px 18px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex: 0 0 auto;
+}
+
+.composer-context {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .composer-heading h2 {
@@ -816,9 +969,18 @@ button.task-check:hover {
   letter-spacing: -0.03em;
 }
 
+.composer-body {
+  min-height: 0;
+  padding: 22px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .composer-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
@@ -872,8 +1034,12 @@ button.task-check:hover {
 
 .composer-actions {
   display: flex;
-  margin-top: 18px;
+  padding: 15px 22px calc(15px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: #fff;
   justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
 .empty-state {
@@ -1225,30 +1391,60 @@ input[type="checkbox"] {
     flex-basis: 100%;
   }
 
+  .main-content {
+    padding-top: 24px;
+  }
+
   .view-header {
-    align-items: flex-start;
+    align-items: center;
+    gap: 14px;
   }
 
   .view-header h1 {
-    font-size: 30px;
+    margin-bottom: 5px;
+    font-size: 23px;
+    font-weight: 600;
+    letter-spacing: -0.045em;
+  }
+
+  .view-header p {
+    font-size: 12px;
   }
 
   .completion-block {
-    display: grid;
-    justify-items: end;
-    gap: 2px;
+    gap: 5px;
   }
 
   .completion-block strong {
-    font-size: 26px;
+    font-size: 24px;
+  }
+
+  .completion-block > span {
+    font-size: 11px;
+  }
+
+  .completion-track {
+    height: 4px;
+    margin-top: 14px;
   }
 
   .status-cards {
-    margin-bottom: 30px;
+    margin: 12px -2px 24px;
+    padding: 2px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .status-cards::-webkit-scrollbar {
+    display: none;
   }
 
   .stat-card {
+    height: 31px;
     padding: 0 10px;
+    flex: 0 0 auto;
   }
 
   .category-toggle {
@@ -1269,7 +1465,7 @@ input[type="checkbox"] {
   }
 
   .task-row {
-    padding: 13px 2px;
+    padding: 13px 2px 13px 8px;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
   }
@@ -1301,7 +1497,26 @@ input[type="checkbox"] {
   }
 
   .task-composer {
-    padding: 18px;
+    width: 100vw;
+    border-left: 0;
+    box-shadow: none;
+  }
+
+  .composer-heading {
+    padding: max(16px, env(safe-area-inset-top)) 16px 14px;
+  }
+
+  .composer-body {
+    padding: 18px 16px;
+  }
+
+  .composer-actions {
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .composer-actions .button {
+    min-height: 44px;
+    flex: 1;
   }
 
   .composer-grid {

@@ -9,9 +9,9 @@
   <meta name="format-detection" content="telephone=no">
   <title>Game Hackathon in Seoul</title>
   <meta name="description" content="Game Hackathon in Seoul 행사 준비 현황판">
-  <meta name="status-board-version" content="6.1.5">
-  <link rel="icon" type="image/svg+xml" href="./assets/app-icon.svg?v=6.1.5">
-  <link rel="stylesheet" href="./styles.css?v=6.1.5">
+  <meta name="status-board-version" content="6.2.0">
+  <link rel="icon" type="image/svg+xml" href="./assets/app-icon.svg?v=6.2.0">
+  <link rel="stylesheet" href="./styles.css?v=6.2.0">
 </head>
 <body>
   <noscript><div class="fatal-message">이 현황판은 JavaScript가 필요합니다. 브라우저 설정에서 JavaScript를 허용해 주세요.</div></noscript>
@@ -39,6 +39,7 @@
               <input id="searchInput" type="search" placeholder="항목 검색" autocomplete="off">
             </label>
             <button id="exportBtn" class="button" type="button">Excel</button>
+            <button id="modeToggleBtn" class="button" type="button" hidden>뷰 모드</button>
             <button id="manageBtn" class="button button-primary" type="button" hidden>목록 관리</button>
             <button id="permissionBtn" class="button" type="button" hidden>권한 관리</button>
             <div class="profile-wrap">
@@ -71,12 +72,23 @@
         <div class="completion-track" aria-hidden="true"><span id="completionFill"></span></div>
         <section id="statusCards" class="status-cards" aria-label="상태 필터"></section>
 
-        <section id="taskComposer" class="task-composer" hidden>
-          <form id="taskForm" class="task-composer-form">
-            <div class="composer-heading">
+        <div id="accessNotice" class="notice" hidden></div>
+        <div id="board"></div>
+      </main>
+    </section>
+
+    <div id="taskComposerLayer" class="composer-layer" hidden>
+      <button id="taskComposerBackdrop" class="composer-backdrop" type="button" aria-label="편집 창 닫기"></button>
+      <aside id="taskComposer" class="task-composer" role="dialog" aria-modal="true" aria-labelledby="taskComposerTitle">
+        <form id="taskForm" class="task-composer-form">
+          <div class="composer-heading">
+            <div>
+              <span id="taskComposerContext" class="composer-context">항목</span>
               <h2 id="taskComposerTitle">새 항목</h2>
-              <button id="cancelTaskBtn" class="button" type="button">취소</button>
             </div>
+            <button id="cancelTaskBtn" class="icon-button" type="button" aria-label="편집 창 닫기">×</button>
+          </div>
+          <div class="composer-body">
             <input id="taskId" type="hidden">
             <div class="composer-grid">
               <div class="field field-wide"><label for="taskTitle">항목명</label><input id="taskTitle" maxlength="180" placeholder="준비할 항목을 입력하세요" required></div>
@@ -84,16 +96,16 @@
               <div class="field"><label for="taskCategory">카테고리</label><select id="taskCategory" required></select></div>
               <div class="field"><label for="taskStatus">진행 상태</label><select id="taskStatus"><option value="대기">대기</option><option value="진행중">진행중</option><option value="이슈">이슈</option><option value="완료">완료</option></select></div>
               <div class="field"><label for="taskDueDate">마감일</label><input id="taskDueDate" type="date"></div>
-              <div class="field field-full"><label for="taskMemo">메모</label><textarea id="taskMemo" maxlength="1000" rows="3" placeholder="확인사항이나 전달 내용을 적어두세요"></textarea></div>
+              <div class="field field-full"><label for="taskMemo">메모</label><textarea id="taskMemo" maxlength="1000" rows="5" placeholder="확인사항이나 전달 내용을 적어두세요"></textarea></div>
             </div>
-            <div class="composer-actions"><button class="button button-primary" type="submit">저장</button></div>
-          </form>
-        </section>
-
-        <div id="accessNotice" class="notice" hidden></div>
-        <div id="board"></div>
-      </main>
-    </section>
+          </div>
+          <div class="composer-actions">
+            <button id="cancelTaskFooterBtn" class="button" type="button">취소</button>
+            <button class="button button-primary" type="submit">저장</button>
+          </div>
+        </form>
+      </aside>
+    </div>
   </div>
 
   <dialog id="manageDialog" class="dialog dialog-wide">
@@ -131,6 +143,6 @@
       }
     }, 8000);
   </script>
-  <script type="module" src="./app.js?v=6.1.5"></script>
+  <script type="module" src="./app.js?v=6.2.0"></script>
 </body>
 </html>

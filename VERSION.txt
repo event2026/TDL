@@ -1,11 +1,11 @@
-Game Hackathon Status Board v6.1.5
+Game Hackathon Status Board v6.2.0
 
 - Brand wordmark and name removed from the interface
 - Minimal flat checklist design
 - White, black, and blue-violet palette
 - Collapsible category lists
 - Clear completion check and strikethrough
-- Optional assignee field with non-destructive "미지정" fallback
+- Empty assignee and due date stay untouched in Firestore and are hidden in the list
 - Existing Firebase collections and records preserved
 - No Firestore rules change from v6.0.2
 - Standalone iPhone/PWA mode removed
@@ -14,3 +14,7 @@ Game Hackathon Status Board v6.1.5
 - Expandable memo with selectable text, URL links, and copy button
 - Same app available on GitHub Pages and Firebase Hosting
 - Existing home screen icons should be removed; use Safari directly
+- Desktop right-side task editor and mobile full-screen editing sheet
+- Compact mobile progress summary
+- Distinct colors for 완료, 진행중, 이슈, and 대기
+- Editor/view mode toggle for users with write access
