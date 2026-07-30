@@ -1,4 +1,4 @@
-# OpenAI Game Hackathon in Seoul Status Board v6.1.1
+# OpenAI Game Hackathon in Seoul Status Board v6.1.2
 
 GitHub Pages에 바로 배포되는 행사 준비 현황판입니다.
 
@@ -20,6 +20,13 @@ GitHub Pages에 바로 배포되는 행사 준비 현황판입니다.
 - 항목 순서는 제목 옆 손잡이를 드래그해 변경하며 메인 화면의 ↑/↓ 버튼은 제거했습니다.
 - 메모를 펼쳐 전체 내용을 보고 선택하거나 복사할 수 있습니다.
 - 메모 안의 `http://` 및 `https://` 주소는 바로 열 수 있는 링크로 표시합니다.
+
+## v6.1.2 이중 주소
+
+- GitHub Pages와 Firebase Hosting에서 동일한 화면과 Firestore 데이터를 사용합니다.
+- GitHub 주소는 그대로 유지합니다.
+- iPhone 홈 화면 앱은 `https://status-board-d2b05.firebaseapp.com/`에서 추가합니다.
+- GitHub 주소로 설치한 기존 홈 화면 앱에서 로그인하면 Firebase Hosting 주소로 이동합니다.
 
 ## 기존 데이터 안전성
 
@@ -60,5 +67,5 @@ TDL/
 
 ## Firebase 규칙
 
-v6.1.1은 로그인 흐름과 화면 기능만 변경하며 `firestore.rules`는 변경하지 않습니다.
+v6.1.2는 Hosting 주소 분기만 추가하며 `firestore.rules`는 변경하지 않습니다.
 v6.0.1의 편집자 전체 권한 규칙을 이미 게시했다면 Firebase Console에서 다시 갱신할 필요가 없습니다.

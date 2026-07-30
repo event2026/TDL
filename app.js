@@ -1,4 +1,4 @@
-import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.1.1";
+import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.1.2";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   browserLocalPersistence,
@@ -246,18 +246,29 @@ function isStandaloneMode() {
     || window.matchMedia?.("(display-mode: standalone)")?.matches === true;
 }
 
+function isFirebaseHostingOrigin() {
+  return window.location.hostname === "status-board-d2b05.firebaseapp.com";
+}
+
 async function beginGoogleLogin() {
   clearLoginError();
-  $("loginStatus").textContent = isStandaloneMode()
+  const standalone = isStandaloneMode();
+  $("loginStatus").textContent = standalone && !isFirebaseHostingOrigin()
+    ? "iPhone 홈 화면 로그인 주소로 이동합니다."
+    : standalone
     ? "Google 로그인 페이지로 이동합니다."
     : "Google 로그인 창을 여는 중입니다.";
   $("loginBtn").disabled = true;
 
   try {
+    if (standalone && !isFirebaseHostingOrigin()) {
+      window.location.assign(CONFIG.firebaseHostingUrl);
+      return;
+    }
     if (state.accessDenied && auth.currentUser) {
       await signOut(auth);
     }
-    if (isStandaloneMode()) {
+    if (standalone) {
       await signInWithRedirect(auth, provider);
       return;
     }

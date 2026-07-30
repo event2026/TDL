@@ -1,4 +1,4 @@
-OpenAI Game Hackathon Status Board v6.1.1
+OpenAI Game Hackathon Status Board v6.1.2
 
 - Official OpenAI wordmark in login and top navigation
 - Minimal flat checklist design
@@ -13,3 +13,5 @@ OpenAI Game Hackathon Status Board v6.1.1
 - Desktop and regular browsers keep popup sign-in
 - Main task reorder buttons removed; drag handle retained
 - Expandable memo with selectable text, URL links, and copy button
+- Same app available on GitHub Pages and Firebase Hosting
+- Existing GitHub-installed iPhone app routes login to Firebase Hosting
