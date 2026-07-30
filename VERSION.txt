@@ -1,4 +1,4 @@
-OpenAI Game Hackathon Status Board v6.1.0
+OpenAI Game Hackathon Status Board v6.1.1
 
 - Official OpenAI wordmark in login and top navigation
 - Minimal flat checklist design
@@ -9,3 +9,7 @@ OpenAI Game Hackathon Status Board v6.1.0
 - Custom note-style iPhone/PWA home screen icon
 - Existing Firebase collections and records preserved
 - No Firestore rules change from v6.0.2
+- Standalone iPhone mode uses full-page Google redirect sign-in
+- Desktop and regular browsers keep popup sign-in
+- Main task reorder buttons removed; drag handle retained
+- Expandable memo with selectable text, URL links, and copy button

@@ -1,4 +1,4 @@
-import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.1.0";
+import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.1.1";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   browserLocalPersistence,
@@ -124,6 +124,28 @@ function escapeHtml(value) {
   })[character]);
 }
 
+function linkifyText(value) {
+  const text = String(value || "");
+  const urlPattern = /https?:\/\/[^\s<>"']+/gi;
+  let html = "";
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(urlPattern)) {
+    const index = match.index ?? 0;
+    let url = match[0];
+    let trailing = "";
+    while (/[),.!?;:]$/.test(url)) {
+      trailing = url.slice(-1) + trailing;
+      url = url.slice(0, -1);
+    }
+    html += escapeHtml(text.slice(lastIndex, index));
+    html += `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>${escapeHtml(trailing)}`;
+    lastIndex = index + match[0].length;
+  }
+
+  return html + escapeHtml(text.slice(lastIndex));
+}
+
 function escapeXml(value) {
   return String(value ?? "").replace(/[<>&'\"]/g, (character) => ({
     "<": "&lt;",
@@ -219,14 +241,25 @@ function closeDialog(id) {
   if (dialog.open) dialog.close();
 }
 
+function isStandaloneMode() {
+  return window.navigator.standalone === true
+    || window.matchMedia?.("(display-mode: standalone)")?.matches === true;
+}
+
 async function beginGoogleLogin() {
   clearLoginError();
-  $("loginStatus").textContent = "Google 로그인 창을 여는 중입니다.";
+  $("loginStatus").textContent = isStandaloneMode()
+    ? "Google 로그인 페이지로 이동합니다."
+    : "Google 로그인 창을 여는 중입니다.";
   $("loginBtn").disabled = true;
 
   try {
     if (state.accessDenied && auth.currentUser) {
       await signOut(auth);
+    }
+    if (isStandaloneMode()) {
+      await signInWithRedirect(auth, provider);
+      return;
     }
     await signInWithPopup(auth, provider);
   } catch (error) {
@@ -463,7 +496,7 @@ function filteredTasks(categoryId) {
     .sort(sortByOrder);
 }
 
-function taskRow(task, orderedTasks) {
+function taskRow(task) {
   const status = STATUS.includes(task.status) ? task.status : "대기";
   const statusControl = canEditStatus()
     ? `<select class="status-control" data-task-status="${task.id}" data-status="${escapeHtml(status)}" aria-label="${escapeHtml(task.title)} 상태">${STATUS.map((item) => `<option value="${item}" ${item === status ? "selected" : ""}>${item}</option>`).join("")}</select>`
@@ -471,20 +504,30 @@ function taskRow(task, orderedTasks) {
   const deadline = dueDateInfo(task.dueDate, status);
   const memo = String(task.memo || "").trim();
   const assignee = String(task.assignee || "").trim() || "미지정";
-  const orderIndex = orderedTasks.findIndex((item) => item.id === task.id);
   const check = isAdmin()
     ? `<button class="task-check" type="button" data-task-complete="${task.id}" aria-label="${escapeHtml(task.title)} ${status === "완료" ? "완료 취소" : "완료 처리"}">${status === "완료" ? "✓" : ""}</button>`
     : `<span class="task-check" aria-hidden="true">${status === "완료" ? "✓" : ""}</span>`;
-  return `<div class="task-row ${status === "완료" ? "is-complete" : ""}" data-task-row="${task.id}" ${isAdmin() ? 'draggable="true"' : ""}>
+  const memoDetails = memo
+    ? `<details class="task-note">
+        <summary>메모 보기</summary>
+        <div class="task-note-body">
+          <p>${linkifyText(memo)}</p>
+          <button class="memo-copy-button" type="button" data-copy-memo="${task.id}">메모 복사</button>
+        </div>
+      </details>`
+    : "";
+  return `<div class="task-row ${status === "완료" ? "is-complete" : ""}" data-task-row="${task.id}">
     <div class="task-main">
+      ${isAdmin() ? `<span class="drag-handle" draggable="true" title="드래그하여 순서 변경" aria-label="${escapeHtml(task.title)} 순서 이동">⠿</span>` : ""}
       ${check}
       <div class="task-copy">
         <strong class="task-title">${escapeHtml(task.title)}</strong>
-        <p class="task-meta"><span class="task-assignee">${escapeHtml(assignee)}</span><span class="deadline deadline-${deadline.className}">${escapeHtml(deadline.text)}</span>${memo ? `<span class="task-memo">${escapeHtml(memo)}</span>` : ""}</p>
+        <p class="task-meta"><span class="task-assignee">${escapeHtml(assignee)}</span><span class="deadline deadline-${deadline.className}">${escapeHtml(deadline.text)}</span></p>
+        ${memoDetails}
       </div>
     </div>
     <div class="task-state">${statusControl}</div>
-    ${isAdmin() ? `<span class="task-actions"><span class="task-order-actions"><button class="button button-small button-icon" type="button" data-task-up="${task.id}" title="위로 이동" ${orderIndex <= 0 ? "disabled" : ""}>↑</button><button class="button button-small button-icon" type="button" data-task-down="${task.id}" title="아래로 이동" ${orderIndex >= orderedTasks.length - 1 ? "disabled" : ""}>↓</button></span><button class="button button-small" type="button" data-inline-edit="${task.id}">편집</button><button class="button button-small button-danger" type="button" data-inline-delete="${task.id}">삭제</button></span>` : ""}
+    ${isAdmin() ? `<span class="task-actions"><button class="button button-small" type="button" data-inline-edit="${task.id}">편집</button><button class="button button-small button-danger" type="button" data-inline-delete="${task.id}">삭제</button></span>` : ""}
   </div>`;
 }
 
@@ -516,7 +559,7 @@ function renderBoard() {
         ${isAdmin() ? `<button class="button button-small category-add" type="button" data-quick-add="${category.id}">+ 추가</button>` : ""}
       </div>
       <div class="category-content" ${expanded ? "" : "hidden"}>
-        <div class="task-list">${visibleTasks.length ? visibleTasks.map((task) => taskRow(task, allTasks)).join("") : '<div class="empty-state"><strong>표시할 항목이 없습니다</strong>항목을 추가하거나 필터를 변경해 보세요.</div>'}</div>
+        <div class="task-list">${visibleTasks.length ? visibleTasks.map((task) => taskRow(task)).join("") : '<div class="empty-state"><strong>표시할 항목이 없습니다</strong>항목을 추가하거나 필터를 변경해 보세요.</div>'}</div>
       </div>
     </section>`;
   }).join("");
@@ -541,8 +584,7 @@ function renderBoard() {
     state.expandedCategoryIds.add(button.dataset.quickAdd);
     showTaskComposer(null, button.dataset.quickAdd);
   }));
-  $("board").querySelectorAll("[data-task-up]").forEach((button) => button.addEventListener("click", () => moveTask(button.dataset.taskUp, -1)));
-  $("board").querySelectorAll("[data-task-down]").forEach((button) => button.addEventListener("click", () => moveTask(button.dataset.taskDown, 1)));
+  $("board").querySelectorAll("[data-copy-memo]").forEach((button) => button.addEventListener("click", () => copyTaskMemo(button.dataset.copyMemo)));
   $("board").querySelectorAll("[data-inline-edit]").forEach((button) => button.addEventListener("click", () => showTaskComposer(state.tasks.find((task) => task.id === button.dataset.inlineEdit))));
   $("board").querySelectorAll("[data-inline-delete]").forEach((button) => button.addEventListener("click", () => deleteTask(button.dataset.inlineDelete)));
   bindTaskDragAndDrop();
@@ -613,6 +655,41 @@ async function toggleTaskCompletion(taskId) {
     notify(firestoreErrorMessage(error), true);
   } finally {
     setSync("실시간 연결", "ok");
+  }
+}
+
+async function copyTaskMemo(taskId) {
+  const task = state.tasks.find((item) => item.id === taskId);
+  const memo = String(task?.memo || "").trim();
+  if (!memo) return;
+
+  try {
+    let copied = false;
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(memo);
+        copied = true;
+      } catch {
+        copied = false;
+      }
+    }
+    if (!copied) {
+      const textarea = document.createElement("textarea");
+      textarea.value = memo;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      copied = document.execCommand("copy");
+      textarea.remove();
+    }
+    if (!copied) throw new Error("copy failed");
+    notify("메모를 복사했습니다.");
+  } catch {
+    notify("복사하지 못했습니다. 메모 내용을 길게 눌러 복사해 주세요.", true);
   }
 }
 
@@ -846,13 +923,15 @@ function bindTaskDragAndDrop() {
   let draggingId = "";
   const rows = [...$("board").querySelectorAll("[data-task-row]")];
   rows.forEach((row) => {
-    row.addEventListener("dragstart", (event) => {
+    const handle = row.querySelector(".drag-handle");
+    if (!handle) return;
+    handle.addEventListener("dragstart", (event) => {
       draggingId = row.dataset.taskRow;
       row.classList.add("dragging");
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", draggingId);
     });
-    row.addEventListener("dragend", () => {
+    handle.addEventListener("dragend", () => {
       row.classList.remove("dragging");
       rows.forEach((item) => item.classList.remove("drag-over"));
     });
