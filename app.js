@@ -1,14 +1,12 @@
-import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.1.2";
+import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.1.3";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   browserLocalPersistence,
   getAuth,
-  getRedirectResult,
   GoogleAuthProvider,
   onAuthStateChanged,
   setPersistence,
   signInWithPopup,
-  signInWithRedirect,
   signOut
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
@@ -241,44 +239,18 @@ function closeDialog(id) {
   if (dialog.open) dialog.close();
 }
 
-function isStandaloneMode() {
-  return window.navigator.standalone === true
-    || window.matchMedia?.("(display-mode: standalone)")?.matches === true;
-}
-
-function isFirebaseHostingOrigin() {
-  return window.location.hostname === "status-board-d2b05.firebaseapp.com";
-}
-
 async function beginGoogleLogin() {
   clearLoginError();
-  const standalone = isStandaloneMode();
-  $("loginStatus").textContent = standalone && !isFirebaseHostingOrigin()
-    ? "iPhone 홈 화면 로그인 주소로 이동합니다."
-    : standalone
-    ? "Google 로그인 페이지로 이동합니다."
-    : "Google 로그인 창을 여는 중입니다.";
+  $("loginStatus").textContent = "Google 로그인 창을 여는 중입니다.";
   $("loginBtn").disabled = true;
 
   try {
-    if (standalone && !isFirebaseHostingOrigin()) {
-      window.location.assign(CONFIG.firebaseHostingUrl);
-      return;
-    }
     if (state.accessDenied && auth.currentUser) {
       await signOut(auth);
-    }
-    if (standalone) {
-      await signInWithRedirect(auth, provider);
-      return;
     }
     await signInWithPopup(auth, provider);
   } catch (error) {
     const code = error?.code || "";
-    if (code === "auth/popup-blocked" || code === "auth/operation-not-supported-in-this-environment") {
-      await signInWithRedirect(auth, provider);
-      return;
-    }
     if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
       showLoginError(authErrorMessage(error));
     } else {
@@ -1274,9 +1246,6 @@ async function boot() {
     provider.setCustomParameters({ prompt: "select_account" });
     await setPersistence(auth, browserLocalPersistence);
     bindStaticEvents();
-    await getRedirectResult(auth).catch((error) => {
-      if (error) showLoginError(authErrorMessage(error));
-    });
     onAuthStateChanged(auth, handleAuthState);
   } catch (error) {
     console.error(error);
