@@ -1,6 +1,6 @@
-OpenAI Game Hackathon Status Board v6.1.4
+Game Hackathon Status Board v6.1.5
 
-- OpenAI wordmark images removed; event name retained as text
+- Brand wordmark and name removed from the interface
 - Minimal flat checklist design
 - White, black, and blue-violet palette
 - Collapsible category lists

@@ -1,4 +1,4 @@
-# OpenAI Game Hackathon in Seoul Status Board v6.1.4
+# Game Hackathon in Seoul Status Board v6.1.5
 
 GitHub Pages에 바로 배포되는 행사 준비 현황판입니다.
 
@@ -32,10 +32,10 @@ GitHub Pages에 바로 배포되는 행사 준비 현황판입니다.
 - 모바일 반응형 디자인은 그대로 유지합니다.
 - 기존에 설치한 홈 화면 아이콘은 삭제하고 Safari에서 접속해야 합니다.
 
-## v6.1.4 로고 제거
+## v6.1.5 브랜드 표기 제거
 
-- 브랜드 가이드 준수를 위해 OpenAI 워드마크 이미지를 로그인 화면과 상단에서 제거했습니다.
-- 행사명 `OpenAI Game Hackathon in Seoul`은 일반 텍스트로 유지합니다.
+- 브랜드 가이드 준수를 위해 워드마크 이미지와 브랜드명 텍스트를 제거했습니다.
+- 행사명은 `Game Hackathon in Seoul`로 표시합니다.
 
 ## 기존 데이터 안전성
 
@@ -74,5 +74,5 @@ TDL/
 
 ## Firebase 규칙
 
-v6.1.4는 화면의 로고 이미지만 제거하며 `firestore.rules`는 변경하지 않습니다.
+v6.1.5는 화면과 메타데이터의 브랜드 표기만 제거하며 `firestore.rules`는 변경하지 않습니다.
 v6.0.1의 편집자 전체 권한 규칙을 이미 게시했다면 Firebase Console에서 다시 갱신할 필요가 없습니다.
