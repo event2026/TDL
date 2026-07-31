@@ -1,6 +1,7 @@
 export const STATUS_BOARD_CONFIG = {
   title: "Game Hackathon in Seoul",
   ownerEmail: "bctf.sh@gmail.com",
+  customAuthDomain: "event2026.foragents.app",
   firebase: {
     apiKey: "AIzaSyDhaJronK1nCvAs0l6k4JvIw24y2gQalAc",
     authDomain: "status-board-d2b05.firebaseapp.com",

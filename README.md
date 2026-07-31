@@ -1,4 +1,4 @@
-# Game Hackathon in Seoul Status Board v6.2.0
+# Game Hackathon in Seoul Status Board v6.3.0
 
 GitHub Pages에 바로 배포되는 행사 준비 현황판입니다.
 
@@ -45,6 +45,17 @@ GitHub Pages에 바로 배포되는 행사 준비 현황판입니다.
 - 완료, 진행중, 이슈, 대기를 서로 다른 색상으로 구분합니다.
 - 편집 권한이 있는 사용자는 `뷰 모드`와 `편집 모드`를 전환할 수 있습니다.
 - 뷰 모드는 추가, 편집, 삭제, 상태 변경, 드래그 기능을 숨겨 실제 열람 화면을 보여줍니다.
+
+## v6.3.0 맞춤 도메인 홈 화면 앱
+
+- 공식 접속 주소는 `https://event2026.foragents.app/`입니다.
+- iPhone Safari에서 홈 화면에 추가하면 주소창과 브라우저 메뉴가 없는 독립 실행 화면으로 열립니다.
+- 새 맞춤 도메인에서는 Firebase 인증 도메인도 같은 주소를 사용해 Safari의 저장소 분리 문제를 줄입니다.
+- 홈 화면 앱에서는 Google 전체 화면 리다이렉트 로그인을 사용합니다.
+- PC와 일반 Safari, 기존 GitHub Pages 및 Firebase 주소에서는 기존 팝업 로그인을 유지합니다.
+- 서비스 워커와 오프라인 데이터 캐시는 사용하지 않습니다.
+- Firestore 컬렉션, 문서, 데이터 및 보안 규칙은 변경하지 않습니다.
+- Google OAuth 클라이언트의 승인된 리다이렉트 URI에 `https://event2026.foragents.app/__/auth/handler`가 필요합니다.
 
 ## 기존 데이터 안전성
 

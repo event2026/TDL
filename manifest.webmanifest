@@ -1,0 +1,25 @@
+{
+  "id": "./",
+  "name": "Game Hackathon in Seoul",
+  "short_name": "Game Hackathon",
+  "description": "Game Hackathon in Seoul 행사 준비 현황판",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

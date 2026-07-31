@@ -1,12 +1,14 @@
-import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.2.0";
+import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.3.0";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   browserLocalPersistence,
+  getRedirectResult,
   getAuth,
   GoogleAuthProvider,
   onAuthStateChanged,
   setPersistence,
   signInWithPopup,
+  signInWithRedirect,
   signOut
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
@@ -42,6 +44,7 @@ const state = {
   categoriesLoaded: false,
   tasksLoaded: false,
   accessUnsub: null,
+  startupAuthError: null,
   expandedCategoryIds: new Set(),
   expansionInitialized: false
 };
@@ -234,6 +237,27 @@ function closeSubscriptions() {
   closeAccessSubscription();
 }
 
+function isStandaloneApp() {
+  return window.matchMedia?.("(display-mode: standalone)").matches
+    || window.navigator.standalone === true;
+}
+
+function usesCustomAuthDomain() {
+  return window.location.hostname === CONFIG.customAuthDomain;
+}
+
+function shouldUseRedirectLogin() {
+  return isStandaloneApp() && usesCustomAuthDomain();
+}
+
+function firebaseConfigForCurrentHost() {
+  if (!usesCustomAuthDomain()) return CONFIG.firebase;
+  return {
+    ...CONFIG.firebase,
+    authDomain: CONFIG.customAuthDomain
+  };
+}
+
 function openDialog(id) {
   const dialog = $(id);
   if (!dialog.open) dialog.showModal();
@@ -246,12 +270,19 @@ function closeDialog(id) {
 
 async function beginGoogleLogin() {
   clearLoginError();
-  $("loginStatus").textContent = "Google 로그인 창을 여는 중입니다.";
+  const redirectLogin = shouldUseRedirectLogin();
+  $("loginStatus").textContent = redirectLogin
+    ? "Google 로그인 화면으로 이동합니다. 완료 후 앱으로 돌아옵니다."
+    : "Google 로그인 창을 여는 중입니다.";
   $("loginBtn").disabled = true;
 
   try {
     if (state.accessDenied && auth.currentUser) {
       await signOut(auth);
+    }
+    if (redirectLogin) {
+      await signInWithRedirect(auth, provider);
+      return;
     }
     await signInWithPopup(auth, provider);
   } catch (error) {
@@ -269,10 +300,13 @@ async function beginGoogleLogin() {
 function authErrorMessage(error) {
   const code = error?.code || "";
   if (code === "auth/unauthorized-domain") {
-    return "Firebase Authentication의 Authorized domains에 event2026.github.io를 추가해 주세요.";
+    return `Firebase Authentication의 승인된 도메인에 ${window.location.hostname}을 추가해 주세요.`;
   }
   if (code === "auth/popup-blocked") {
     return "브라우저가 로그인 팝업을 차단했습니다. 팝업을 허용한 뒤 다시 시도해 주세요.";
+  }
+  if (code === "auth/web-storage-unsupported") {
+    return "이 실행 환경에서 로그인 저장소를 사용할 수 없습니다. Safari 개인정보 보호 설정을 확인한 뒤 다시 시도해 주세요.";
   }
   if (code === "auth/network-request-failed") {
     return "네트워크 연결에 실패했습니다. 인터넷 연결과 Firebase 설정을 확인해 주세요.";
@@ -1260,6 +1294,12 @@ async function handleAuthState(user) {
     $("loginStatus").textContent = "로그인할 Google 계정을 선택해 주세요.";
     $("loginError").className = "notice notice-error";
     clearLoginError();
+    if (state.startupAuthError) {
+      showLoginError(authErrorMessage(state.startupAuthError));
+      state.startupAuthError = null;
+    } else if (shouldUseRedirectLogin()) {
+      $("loginStatus").textContent = "홈 화면 앱에서는 로그인 후 이 화면으로 자동으로 돌아옵니다.";
+    }
     return;
   }
 
@@ -1292,13 +1332,18 @@ async function boot() {
   $("loginStatus").textContent = "Firebase에 연결하고 있습니다.";
 
   try {
-    app = initializeApp(CONFIG.firebase);
+    app = initializeApp(firebaseConfigForCurrentHost());
     auth = getAuth(app);
     db = getFirestore(app);
     provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
     await setPersistence(auth, browserLocalPersistence);
     bindStaticEvents();
+    try {
+      await getRedirectResult(auth);
+    } catch (error) {
+      state.startupAuthError = error;
+    }
     onAuthStateChanged(auth, handleAuthState);
   } catch (error) {
     console.error(error);
