@@ -1,4 +1,4 @@
-import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.3.0";
+import { STATUS_BOARD_CONFIG as CONFIG } from "./config.js?v=6.3.1";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   browserLocalPersistence,
@@ -251,7 +251,7 @@ function shouldUseRedirectLogin() {
 }
 
 function firebaseConfigForCurrentHost() {
-  if (!usesCustomAuthDomain()) return CONFIG.firebase;
+  if (!shouldUseRedirectLogin()) return CONFIG.firebase;
   return {
     ...CONFIG.firebase,
     authDomain: CONFIG.customAuthDomain

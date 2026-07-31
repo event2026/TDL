@@ -1,4 +1,4 @@
-Game Hackathon Status Board v6.3.0
+Game Hackathon Status Board v6.3.1
 
 - Brand wordmark and name removed from the interface
 - Minimal flat checklist design
@@ -21,6 +21,7 @@ Game Hackathon Status Board v6.3.0
 - Custom domain: https://event2026.foragents.app/
 - iPhone standalone home screen mode restored for the custom domain
 - Standalone mode uses same-origin Firebase redirect sign-in
+- Normal browser mode keeps the previous Firebase auth domain until standalone OAuth is confirmed
 - Desktop, normal Safari, GitHub Pages, and default Firebase URLs keep popup sign-in
 - Manifest and Apple touch icon enabled without a service worker or offline data cache
 - Existing Firestore collections, documents, data, and rules remain unchanged
